@@ -2,18 +2,14 @@ package interactor
 
 type ExportedFeedInteractor feedInteractor
 
-func (f *feedInteractor) CsvFetcher() CsvRepo {
-	return f.csvFetcher
+func (i *feedInteractor) FileRepo() Uploader {
+	return i.uploader
 }
 
-func (f *feedInteractor) FileRepo() FileRepo {
-	return f.files
+func (i *feedInteractor) GenerationRepo() FeedRepo {
+	return i.feeds
 }
 
-func (f *feedInteractor) GenerationRepo() GenerationRepo {
-	return f.generations
-}
-
-func (f *feedInteractor) Presenter() Presenter {
-	return f.presenter
+func (i *feedInteractor) Presenter() Presenter {
+	return i.presenter
 }

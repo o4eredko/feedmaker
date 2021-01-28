@@ -13,27 +13,32 @@ type FeedInteractor struct {
 	mock.Mock
 }
 
+// CancelGeneration provides a mock function with given fields: ctx, id
+func (_m *FeedInteractor) CancelGeneration(ctx context.Context, id string) error {
+	ret := _m.Called(ctx, id)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = rf(ctx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // Generate provides a mock function with given fields: ctx, generationType
-func (_m *FeedInteractor) Generate(ctx context.Context, generationType string) (interface{}, error) {
+func (_m *FeedInteractor) Generate(ctx context.Context, generationType string) error {
 	ret := _m.Called(ctx, generationType)
 
-	var r0 interface{}
-	if rf, ok := ret.Get(0).(func(context.Context, string) interface{}); ok {
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) error); ok {
 		r0 = rf(ctx, generationType)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(interface{})
-		}
+		r0 = ret.Error(0)
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, generationType)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
+	return r0
 }
 
 // ListGenerationTypes provides a mock function with given fields: ctx
@@ -80,32 +85,4 @@ func (_m *FeedInteractor) ListGenerations(ctx context.Context) (interface{}, err
 	}
 
 	return r0, r1
-}
-
-// PauseGeneration provides a mock function with given fields: ctx
-func (_m *FeedInteractor) PauseGeneration(ctx context.Context) error {
-	ret := _m.Called(ctx)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
-		r0 = rf(ctx)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// ResumeGeneration provides a mock function with given fields: ctx
-func (_m *FeedInteractor) ResumeGeneration(ctx context.Context) error {
-	ret := _m.Called(ctx)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
-		r0 = rf(ctx)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
 }
