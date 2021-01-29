@@ -18,14 +18,14 @@ var (
 	defaultErr = errors.New("test error")
 )
 
-type fields struct {
+type ftpFields struct {
 	dialer     *mocks.Dialer
 	config     gateway.FtpConfig
 	connection *mocks.FtpConnection
 }
 
-func defaultFields() *fields {
-	return &fields{
+func defaultFtpFields() *ftpFields {
+	return &ftpFields{
 		dialer:     new(mocks.Dialer),
 		connection: new(mocks.FtpConnection),
 		config: gateway.FtpConfig{
@@ -41,14 +41,14 @@ func defaultFields() *fields {
 func TestFtpGateway_Connect(t *testing.T) {
 	testCases := []struct {
 		name       string
-		fields     *fields
-		setupMocks func(f *fields)
+		fields     *ftpFields
+		setupMocks func(f *ftpFields)
 		wantErr    error
 	}{
 		{
 			name:   "succeed",
-			fields: defaultFields(),
-			setupMocks: func(f *fields) {
+			fields: defaultFtpFields(),
+			setupMocks: func(f *ftpFields) {
 				f.dialer.
 					On("DialTimeout", f.config.Addr(), f.config.ConnTimeout).
 					Return(f.connection, nil)
@@ -59,8 +59,8 @@ func TestFtpGateway_Connect(t *testing.T) {
 		},
 		{
 			name:   "dial error",
-			fields: defaultFields(),
-			setupMocks: func(f *fields) {
+			fields: defaultFtpFields(),
+			setupMocks: func(f *ftpFields) {
 				f.dialer.
 					On("DialTimeout", f.config.Addr(), f.config.ConnTimeout).
 					Return(nil, defaultErr)
@@ -69,8 +69,8 @@ func TestFtpGateway_Connect(t *testing.T) {
 		},
 		{
 			name:   "login error",
-			fields: defaultFields(),
-			setupMocks: func(f *fields) {
+			fields: defaultFtpFields(),
+			setupMocks: func(f *ftpFields) {
 				f.dialer.
 					On("DialTimeout", f.config.Addr(), f.config.ConnTimeout).
 					Return(f.connection, nil)
@@ -114,41 +114,41 @@ func TestFtpGateway_Upload(t *testing.T) {
 	testCases := []struct {
 		name       string
 		args       *args
-		fields     *fields
-		setupMocks func(*args, *fields)
+		fields     *ftpFields
+		setupMocks func(*args, *ftpFields)
 		wantErr    error
 	}{
 		{
 			name: "succeed",
 			args: defaultArgs(),
-			fields: &fields{
+			fields: &ftpFields{
 				config:     gateway.FtpConfig{},
 				dialer:     new(mocks.Dialer),
 				connection: new(mocks.FtpConnection),
 			},
-			setupMocks: func(a *args, f *fields) {
+			setupMocks: func(a *args, f *ftpFields) {
 				f.connection.On("Stor", a.path, a.r).Return(nil)
 			},
 		},
 		{
 			name: "disconnected error",
 			args: defaultArgs(),
-			fields: &fields{
+			fields: &ftpFields{
 				config: gateway.FtpConfig{},
 				dialer: new(mocks.Dialer),
 			},
-			setupMocks: func(a *args, f *fields) {},
+			setupMocks: func(a *args, f *ftpFields) {},
 			wantErr:    gateway.ErrFtpDisconnected,
 		},
 		{
 			name: "Stor error",
 			args: defaultArgs(),
-			fields: &fields{
+			fields: &ftpFields{
 				config:     gateway.FtpConfig{},
 				dialer:     new(mocks.Dialer),
 				connection: new(mocks.FtpConnection),
 			},
-			setupMocks: func(a *args, f *fields) {
+			setupMocks: func(a *args, f *ftpFields) {
 				f.connection.On("Stor", a.path, a.r).Return(defaultErr)
 			},
 			wantErr: defaultErr,
@@ -177,39 +177,39 @@ func TestFtpGateway_Upload(t *testing.T) {
 func TestFtpGateway_Disconnect(t *testing.T) {
 	testCases := []struct {
 		name       string
-		fields     *fields
-		setupMocks func(f *fields)
+		fields     *ftpFields
+		setupMocks func(f *ftpFields)
 		wantErr    error
 	}{
 		{
 			name: "succeed",
-			fields: &fields{
+			fields: &ftpFields{
 				config:     gateway.FtpConfig{},
 				dialer:     new(mocks.Dialer),
 				connection: new(mocks.FtpConnection),
 			},
-			setupMocks: func(f *fields) {
+			setupMocks: func(f *ftpFields) {
 				f.connection.On("Quit").Return(nil)
 			},
 		},
 		{
 			name: "disconnected error",
-			fields: &fields{
+			fields: &ftpFields{
 				config:     gateway.FtpConfig{},
 				dialer:     new(mocks.Dialer),
 				connection: nil,
 			},
-			setupMocks: func(f *fields) {},
+			setupMocks: func(f *ftpFields) {},
 			wantErr:    gateway.ErrFtpDisconnected,
 		},
 		{
 			name: "Quit error",
-			fields: &fields{
+			fields: &ftpFields{
 				config:     gateway.FtpConfig{},
 				dialer:     new(mocks.Dialer),
 				connection: new(mocks.FtpConnection),
 			},
-			setupMocks: func(f *fields) {
+			setupMocks: func(f *ftpFields) {
 				f.connection.On("Quit").Return(defaultErr)
 			},
 			wantErr: defaultErr,
