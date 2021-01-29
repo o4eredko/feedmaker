@@ -2,6 +2,7 @@ package gateway_test
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	"testing"
@@ -99,11 +100,13 @@ func TestFtpGateway_Connect(t *testing.T) {
 
 func TestFtpGateway_Upload(t *testing.T) {
 	type args struct {
+		ctx  context.Context
 		path string
 		r    io.Reader
 	}
 	defaultArgs := func() *args {
 		return &args{
+			ctx:  context.Background(),
 			path: "test",
 			r:    bytes.NewBufferString("test"),
 		}
@@ -160,7 +163,7 @@ func TestFtpGateway_Upload(t *testing.T) {
 			}
 			ftpGateway.SetConnection(testCase.fields.connection)
 
-			gotErr := ftpGateway.Upload(testCase.args.path, testCase.args.r)
+			gotErr := ftpGateway.Upload(testCase.args.ctx, testCase.args.path, testCase.args.r)
 
 			assert.Equal(t, testCase.wantErr, gotErr)
 			testCase.fields.dialer.AssertExpectations(t)

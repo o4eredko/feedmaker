@@ -1,15 +1,13 @@
 package gateway
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"reflect"
 	"time"
 )
-
-// "kr"
-// "Njdjewi38298"
 
 type (
 	FtpConfig struct {
@@ -58,7 +56,7 @@ func (f *FtpGateway) Connect() error {
 	return nil
 }
 
-func (f *FtpGateway) Upload(path string, r io.Reader) error {
+func (f *FtpGateway) Upload(ctx context.Context, path string, r io.Reader) error {
 	if reflect.ValueOf(f.connection).IsNil() {
 		return ErrFtpDisconnected
 	}

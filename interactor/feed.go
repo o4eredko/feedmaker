@@ -20,7 +20,7 @@ type (
 	}
 
 	Uploader interface {
-		Upload(ctx context.Context, file io.Reader) error
+		Upload(ctx context.Context, filepath string, file io.Reader) error
 	}
 
 	DataFetcher interface {
@@ -107,7 +107,7 @@ func (i *feedInteractor) Generate(ctx context.Context, generationType string) er
 	}
 
 	for file := range fileStream {
-		if err := i.uploader.Upload(ctx, file); err != nil {
+		if err := i.uploader.Upload(ctx, generationType, file); err != nil {
 			log.Error().Msgf("Cannot upload file, %s", err.Error())
 		}
 	}

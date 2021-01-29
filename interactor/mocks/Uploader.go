@@ -15,13 +15,13 @@ type Uploader struct {
 	mock.Mock
 }
 
-// Upload provides a mock function with given fields: ctx, file
-func (_m *Uploader) Upload(ctx context.Context, file io.Reader) error {
-	ret := _m.Called(ctx, file)
+// Upload provides a mock function with given fields: ctx, filepath, file
+func (_m *Uploader) Upload(ctx context.Context, filepath string, file io.Reader) error {
+	ret := _m.Called(ctx, filepath, file)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, io.Reader) error); ok {
-		r0 = rf(ctx, file)
+	if rf, ok := ret.Get(0).(func(context.Context, string, io.Reader) error); ok {
+		r0 = rf(ctx, filepath, file)
 	} else {
 		r0 = ret.Error(0)
 	}

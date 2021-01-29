@@ -109,8 +109,8 @@ func TestFeedInteractor_Generate(t *testing.T) {
 				factory.On("CreateFileFormatter", dataStream).Return(fileFormatter)
 				dataFetcher.On("FetchDataStream", a.ctx).Return(dataStream, nil)
 				fileFormatter.On("FormatFiles", a.ctx).Return((<-chan io.Reader)(fileStream), nil)
-				f.uploader.On("Upload", a.ctx, file1).Return(nil)
-				f.uploader.On("Upload", a.ctx, file2).Return(nil)
+				f.uploader.On("Upload", a.ctx, a.generationType, file1).Return(nil)
+				f.uploader.On("Upload", a.ctx, a.generationType, file2).Return(nil)
 
 				t.Cleanup(func() {
 					factory.AssertExpectations(t)
@@ -223,8 +223,8 @@ func TestFeedInteractor_Generate(t *testing.T) {
 				factory.On("CreateFileFormatter", dataStream).Return(fileFormatter)
 				dataFetcher.On("FetchDataStream", a.ctx).Return(dataStream, nil)
 				fileFormatter.On("FormatFiles", a.ctx).Return((<-chan io.Reader)(fileStream), nil)
-				f.uploader.On("Upload", a.ctx, file1).Return(defaultErr)
-				f.uploader.On("Upload", a.ctx, file2).Return(nil)
+				f.uploader.On("Upload", a.ctx, a.generationType, file1).Return(defaultErr)
+				f.uploader.On("Upload", a.ctx, a.generationType, file2).Return(nil)
 
 				t.Cleanup(func() {
 					factory.AssertExpectations(t)
