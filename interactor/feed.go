@@ -13,7 +13,7 @@ import (
 
 type (
 	FeedInteractor interface {
-		Generate(ctx context.Context, generationType string) error
+		GenerateFeed(ctx context.Context, generationType string) error
 		ListGenerations(ctx context.Context) (interface{}, error)
 		ListGenerationTypes(ctx context.Context) (interface{}, error)
 		CancelGeneration(ctx context.Context, id string) error
@@ -24,24 +24,27 @@ type (
 	}
 
 	DataFetcher interface {
-		FetchDataStream(ctx context.Context) (<-chan []string, error)
+		CountRecords(ctx context.Context) (uint, error)
+		StreamData(ctx context.Context) error
 	}
 
 	FeedFactory interface {
-		CreateDataFetcher() DataFetcher
-		CreateFileFormatter(dataStream <-chan []string) FileFormatter
+		CreateDataFetcher(outStream chan<- []string) DataFetcher
+		CreateFileFormatter(inStream <-chan []string, outStream chan<- io.Reader) FileFormatter
 	}
 
 	FileFormatter interface {
-		FormatFiles(ctx context.Context) (<-chan io.Reader, error)
+		FormatFiles(ctx context.Context) error
 	}
 
 	FeedRepo interface {
 		GetFactoryByGenerationType(generationType string) (FeedFactory, error)
 		StoreGeneration(ctx context.Context, generation *entity.Generation) (*entity.Generation, error)
+		UpdateProgress(ctx context.Context, generationID string, progress int) error
 		ListGenerations(ctx context.Context) ([]*entity.Generation, error)
 		ListAllowedTypes(ctx context.Context) ([]string, error)
 		IsAllowedType(ctx context.Context, generationType string) (bool, error)
+		IsCanceled(ctx context.Context, generationID string) (bool, error)
 		CancelGeneration(ctx context.Context, id string) error
 	}
 
@@ -57,22 +60,12 @@ type (
 		presenter Presenter
 	}
 
-	GenerationsOut struct {
-		ID        string
-		Type      string
-		Progress  uint
-		StartTime time.Time
-		EndTime   time.Time
-	}
+	GenerationsOut entity.Generation
 
 	ListGenerationsOut []*GenerationsOut
 )
 
-func NewFeedInteractor(
-	files Uploader,
-	generations FeedRepo,
-	presenter Presenter,
-) *feedInteractor {
+func NewFeedInteractor(files Uploader, generations FeedRepo, presenter Presenter) *feedInteractor {
 	return &feedInteractor{
 		uploader:  files,
 		feeds:     generations,
@@ -80,7 +73,7 @@ func NewFeedInteractor(
 	}
 }
 
-func (i *feedInteractor) Generate(ctx context.Context, generationType string) error {
+func (i *feedInteractor) GenerateFeed(ctx context.Context, generationType string) error {
 	factory, err := i.feeds.GetFactoryByGenerationType(generationType)
 	if err != nil {
 		return i.presenter.PresentErr(err)
@@ -94,25 +87,65 @@ func (i *feedInteractor) Generate(ctx context.Context, generationType string) er
 	if err != nil {
 		return i.presenter.PresentErr(err)
 	}
+	ctx, cancel := context.WithCancel(ctx)
+	go i.onGenerationCanceled(generation.ID, cancel)
 
-	dataFetcher := factory.CreateDataFetcher()
-	dataStream, err := dataFetcher.FetchDataStream(ctx)
-	if err != nil {
-		return i.presenter.PresentErr(err)
-	}
-	fileFormatter := factory.CreateFileFormatter(dataStream)
-	fileStream, err := fileFormatter.FormatFiles(ctx)
-	if err != nil {
-		return i.presenter.PresentErr(err)
-	}
+	errStream := make(chan error)
+	recordStream := make(chan []string)
+	fileStream := make(chan io.Reader)
+	dataFetcher := factory.CreateDataFetcher(recordStream)
+	fileFormatter := factory.CreateFileFormatter(recordStream, fileStream)
 
-	for file := range fileStream {
-		if err := i.uploader.Upload(ctx, generationType, file); err != nil {
-			log.Error().Msgf("Cannot upload file, %s", err.Error())
+	go fetchData(ctx, dataFetcher, errStream)
+	go formatFiles(ctx, fileFormatter, errStream)
+	go func() {
+		for file := range fileStream {
+			if err := i.uploader.Upload(ctx, generationType, file); err != nil {
+				errStream <- err
+			}
 		}
+	}()
+	for err := range errStream {
+		cancel()
+		log.Error().Err(err).Msgf("Cannot generate feed for %s", generationType)
+		return err
 	}
-	_ = generation
 	return nil
+}
+
+func fetchData(ctx context.Context, fetcher DataFetcher, errStream chan<- error) {
+	if err := fetcher.StreamData(ctx); err != nil {
+		errStream <- err
+	}
+
+}
+
+func formatFiles(ctx context.Context, formatter FileFormatter, errStream chan<- error) {
+	if err := formatter.FormatFiles(ctx); err != nil {
+		errStream <- err
+	}
+}
+
+func (i *feedInteractor) onProgress(generationID string, progress int) {
+	err := i.feeds.UpdateProgress(context.Background(), generationID, progress)
+	if err != nil {
+		log.Error().Err(err).Msgf(
+			"Cannot set progress for generation = %s progress = %d",
+			generationID, progress,
+		)
+	}
+}
+
+func (i *feedInteractor) onGenerationCanceled(generationID string, f func()) {
+	isRejected, err := i.feeds.IsCanceled(context.Background(), generationID)
+	if err != nil {
+		log.Error().
+			Err(err).
+			Msgf("Cannot check if generation with id %s rejected", generationID)
+	} else if isRejected {
+		f()
+	}
+	time.Sleep(time.Second)
 }
 
 func (i *feedInteractor) ListGenerations(ctx context.Context) (interface{}, error) {

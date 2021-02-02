@@ -74,6 +74,27 @@ func (_m *FeedRepo) IsAllowedType(ctx context.Context, generationType string) (b
 	return r0, r1
 }
 
+// IsCanceled provides a mock function with given fields: ctx, generationID
+func (_m *FeedRepo) IsCanceled(ctx context.Context, generationID string) (bool, error) {
+	ret := _m.Called(ctx, generationID)
+
+	var r0 bool
+	if rf, ok := ret.Get(0).(func(context.Context, string) bool); ok {
+		r0 = rf(ctx, generationID)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, generationID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // ListAllowedTypes provides a mock function with given fields: ctx
 func (_m *FeedRepo) ListAllowedTypes(ctx context.Context) ([]string, error) {
 	ret := _m.Called(ctx)
@@ -141,4 +162,18 @@ func (_m *FeedRepo) StoreGeneration(ctx context.Context, generation *entity.Gene
 	}
 
 	return r0, r1
+}
+
+// UpdateProgress provides a mock function with given fields: ctx, generationID, progress
+func (_m *FeedRepo) UpdateProgress(ctx context.Context, generationID string, progress int) error {
+	ret := _m.Called(ctx, generationID, progress)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, int) error); ok {
+		r0 = rf(ctx, generationID, progress)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }

@@ -29,13 +29,13 @@ func (_m *FeedFactory) CreateDataFetcher() interactor.DataFetcher {
 	return r0
 }
 
-// CreateFileFormatter provides a mock function with given fields: dataStream
-func (_m *FeedFactory) CreateFileFormatter(dataStream <-chan []string) interactor.FileFormatter {
-	ret := _m.Called(dataStream)
+// CreateFileFormatter provides a mock function with given fields: recordsCount, dataStream
+func (_m *FeedFactory) CreateFileFormatter(recordsCount uint, dataStream <-chan []string) interactor.FileFormatter {
+	ret := _m.Called(recordsCount, dataStream)
 
 	var r0 interactor.FileFormatter
-	if rf, ok := ret.Get(0).(func(<-chan []string) interactor.FileFormatter); ok {
-		r0 = rf(dataStream)
+	if rf, ok := ret.Get(0).(func(uint, <-chan []string) interactor.FileFormatter); ok {
+		r0 = rf(recordsCount, dataStream)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(interactor.FileFormatter)

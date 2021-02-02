@@ -27,8 +27,8 @@ func (_m *FeedInteractor) CancelGeneration(ctx context.Context, id string) error
 	return r0
 }
 
-// Generate provides a mock function with given fields: ctx, generationType
-func (_m *FeedInteractor) Generate(ctx context.Context, generationType string) error {
+// GenerateFeed provides a mock function with given fields: ctx, generationType
+func (_m *FeedInteractor) GenerateFeed(ctx context.Context, generationType string) error {
 	ret := _m.Called(ctx, generationType)
 
 	var r0 error

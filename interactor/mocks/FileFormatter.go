@@ -15,8 +15,13 @@ type FileFormatter struct {
 	mock.Mock
 }
 
-// FormatFiles provides a mock function with given fields: ctx
-func (_m *FileFormatter) FormatFiles(ctx context.Context) (<-chan io.Reader, error) {
+// OnProgress provides a mock function with given fields: _a0
+func (_m *FileFormatter) OnProgress(_a0 func(string, int)) {
+	_m.Called(_a0)
+}
+
+// StreamFiles provides a mock function with given fields: ctx
+func (_m *FileFormatter) StreamFiles(ctx context.Context) (<-chan io.Reader, error) {
 	ret := _m.Called(ctx)
 
 	var r0 <-chan io.Reader

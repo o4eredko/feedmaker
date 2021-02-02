@@ -107,7 +107,7 @@ func TestFeedInteractor_Generate(t *testing.T) {
 				f.feeds.On("StoreGeneration", a.ctx, mock.MatchedBy(generationMatches)).Return(&generation1, nil)
 				factory.On("CreateDataFetcher").Return(dataFetcher)
 				factory.On("CreateFileFormatter", dataStream).Return(fileFormatter)
-				dataFetcher.On("FetchDataStream", a.ctx).Return(dataStream, nil)
+				dataFetcher.On("StreamData", a.ctx).Return(dataStream, nil)
 				fileFormatter.On("FormatFiles", a.ctx).Return((<-chan io.Reader)(fileStream), nil)
 				f.uploader.On("Upload", a.ctx, a.generationType, file1).Return(nil)
 				f.uploader.On("Upload", a.ctx, a.generationType, file2).Return(nil)
@@ -146,7 +146,7 @@ func TestFeedInteractor_Generate(t *testing.T) {
 			wantErr: defaultErr,
 		},
 		{
-			name: "feeds.FetchDataStream error",
+			name: "feeds.StreamData error",
 			args: defaultArgs(),
 			setupMocks: func(a *args, f *fields) {
 				generationMatches := func(g *entity.Generation) bool {
@@ -159,7 +159,7 @@ func TestFeedInteractor_Generate(t *testing.T) {
 				f.feeds.On("GetFactoryByGenerationType", a.generationType).Return(factory, nil)
 				f.feeds.On("StoreGeneration", a.ctx, mock.MatchedBy(generationMatches)).Return(&generation1, nil)
 				factory.On("CreateDataFetcher").Return(dataFetcher)
-				dataFetcher.On("FetchDataStream", a.ctx).Return(nil, defaultErr)
+				dataFetcher.On("StreamData", a.ctx).Return(nil, defaultErr)
 				f.presenter.On("PresentErr", mock.Anything).Return(errPassThrough)
 
 				t.Cleanup(func() {
@@ -186,7 +186,7 @@ func TestFeedInteractor_Generate(t *testing.T) {
 				f.feeds.On("StoreGeneration", a.ctx, mock.MatchedBy(generationMatches)).Return(&generation1, nil)
 				factory.On("CreateDataFetcher").Return(dataFetcher)
 				factory.On("CreateFileFormatter", dataStream).Return(fileFormatter)
-				dataFetcher.On("FetchDataStream", a.ctx).Return(dataStream, nil)
+				dataFetcher.On("StreamData", a.ctx).Return(dataStream, nil)
 				fileFormatter.On("FormatFiles", a.ctx).Return(nil, defaultErr)
 				f.presenter.On("PresentErr", mock.Anything).Return(errPassThrough)
 
@@ -221,7 +221,7 @@ func TestFeedInteractor_Generate(t *testing.T) {
 				f.feeds.On("StoreGeneration", a.ctx, mock.MatchedBy(generationMatches)).Return(&generation1, nil)
 				factory.On("CreateDataFetcher").Return(dataFetcher)
 				factory.On("CreateFileFormatter", dataStream).Return(fileFormatter)
-				dataFetcher.On("FetchDataStream", a.ctx).Return(dataStream, nil)
+				dataFetcher.On("StreamData", a.ctx).Return(dataStream, nil)
 				fileFormatter.On("FormatFiles", a.ctx).Return((<-chan io.Reader)(fileStream), nil)
 				f.uploader.On("Upload", a.ctx, a.generationType, file1).Return(defaultErr)
 				f.uploader.On("Upload", a.ctx, a.generationType, file2).Return(nil)
@@ -241,7 +241,7 @@ func TestFeedInteractor_Generate(t *testing.T) {
 			interactor := fields.newInteractor()
 			testCase.setupMocks(testCase.args, fields)
 
-			gotErr := interactor.Generate(testCase.args.ctx, testCase.args.generationType)
+			gotErr := interactor.GenerateFeed(testCase.args.ctx, testCase.args.generationType)
 
 			assert.Equal(t, testCase.wantErr, gotErr)
 			fields.assertExpectations(t)
