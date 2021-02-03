@@ -5,6 +5,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/google/uuid v1.2.0 h1:qJYtXnJRWmpe7m/3XlyhrsLrEURqHRM2kxzoxXqyUDs=
 github.com/google/uuid v1.2.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+github.com/inhies/go-bytesize v0.0.0-20201103132853-d0aed0d254f8 h1:RrGCja4Grfz7QM2hw+SUZIYlbHoqBfbvzlWRT3seXB8=
+github.com/inhies/go-bytesize v0.0.0-20201103132853-d0aed0d254f8/go.mod h1:KrtyD5PFj++GKkFS/7/RRrfnRhAMGQwy75GLCHWrCNs=
 github.com/jlaffaye/ftp v0.0.0-20201112195030-9aae4d151126 h1:ly2C51IMpCCV8RpTDRXgzG/L9iZXb8ePEixaew/HwBs=
 github.com/jlaffaye/ftp v0.0.0-20201112195030-9aae4d151126/go.mod h1:2lmrmq866uF2tnje75wQHzmPXhmSWUt7Gyx2vgK1RCU=
 github.com/mediocregopher/radix/v3 v3.7.0 h1:SM9zJdme5pYGEVvh1HttjBjDmIaNBDKy+oDCv5w81Wo=
