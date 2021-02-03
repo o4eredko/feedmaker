@@ -30,7 +30,7 @@ type (
 
 	FeedFactory interface {
 		CreateDataFetcher(outStream chan<- []string) DataFetcher
-		CreateFileFormatter(inStream <-chan []string, outStream chan<- io.Reader) FileFormatter
+		CreateFileFormatter(inStream <-chan []string, outStream chan<- io.ReadCloser) FileFormatter
 	}
 
 	FileFormatter interface {
@@ -78,7 +78,6 @@ func (i *feedInteractor) GenerateFeed(ctx context.Context, generationType string
 	if err != nil {
 		return i.presenter.PresentErr(err)
 	}
-
 	generation, err := i.feeds.StoreGeneration(ctx, &entity.Generation{
 		ID:        uuid.New().String(),
 		Type:      generationType,
@@ -87,40 +86,46 @@ func (i *feedInteractor) GenerateFeed(ctx context.Context, generationType string
 	if err != nil {
 		return i.presenter.PresentErr(err)
 	}
-	ctx, cancel := context.WithCancel(ctx)
-	go i.onGenerationCanceled(generation.ID, cancel)
 
+	ctx, cancelCtx := context.WithCancel(ctx)
+	go i.onGenerationCanceled(ctx, generation.ID, cancelCtx)
 	errStream := make(chan error)
 	recordStream := make(chan []string)
-	fileStream := make(chan io.Reader)
+	fileStream := make(chan io.ReadCloser)
+	defer cancelCtx()
+	defer close(errStream)
+
 	dataFetcher := factory.CreateDataFetcher(recordStream)
 	fileFormatter := factory.CreateFileFormatter(recordStream, fileStream)
 
-	go fetchData(ctx, dataFetcher, errStream)
-	go formatFiles(ctx, fileFormatter, errStream)
-	go func() {
-		for file := range fileStream {
-			if err := i.uploader.Upload(ctx, generationType, file); err != nil {
-				errStream <- err
-			}
-		}
-	}()
+	go i.fetchData(ctx, dataFetcher, errStream)
+	go i.formatFiles(ctx, fileFormatter, errStream)
+	go i.uploadFiles(ctx, fileStream, generationType, errStream)
 	for err := range errStream {
-		cancel()
-		log.Error().Err(err).Msgf("Cannot generate feed for %s", generationType)
-		return err
+		cancelCtx()
+		return i.presenter.PresentErr(err)
 	}
 	return nil
 }
 
-func fetchData(ctx context.Context, fetcher DataFetcher, errStream chan<- error) {
+func (i *feedInteractor) uploadFiles(ctx context.Context, fileStream <-chan io.ReadCloser, generationType string, errStream chan<- error) {
+	for file := range fileStream {
+		if err := i.uploader.Upload(ctx, generationType, file); err != nil {
+			errStream <- err
+		}
+		if err := file.Close(); err != nil {
+			log.Error().Err(err).Msgf("Cannot close file during %s generation", generationType)
+		}
+	}
+}
+
+func (i *feedInteractor) fetchData(ctx context.Context, fetcher DataFetcher, errStream chan<- error) {
 	if err := fetcher.StreamData(ctx); err != nil {
 		errStream <- err
 	}
-
 }
 
-func formatFiles(ctx context.Context, formatter FileFormatter, errStream chan<- error) {
+func (i *feedInteractor) formatFiles(ctx context.Context, formatter FileFormatter, errStream chan<- error) {
 	if err := formatter.FormatFiles(ctx); err != nil {
 		errStream <- err
 	}
@@ -136,16 +141,18 @@ func (i *feedInteractor) onProgress(generationID string, progress int) {
 	}
 }
 
-func (i *feedInteractor) onGenerationCanceled(generationID string, f func()) {
-	isRejected, err := i.feeds.IsCanceled(context.Background(), generationID)
-	if err != nil {
-		log.Error().
-			Err(err).
-			Msgf("Cannot check if generation with id %s rejected", generationID)
-	} else if isRejected {
-		f()
+func (i *feedInteractor) onGenerationCanceled(ctx context.Context, generationID string, f func()) {
+	for {
+		isRejected, err := i.feeds.IsCanceled(ctx, generationID)
+		if err != nil {
+			log.Error().
+				Err(err).
+				Msgf("Cannot check if generation with id %s rejected", generationID)
+		} else if isRejected {
+			f()
+		}
+		time.Sleep(time.Second)
 	}
-	time.Sleep(time.Second)
 }
 
 func (i *feedInteractor) ListGenerations(ctx context.Context) (interface{}, error) {

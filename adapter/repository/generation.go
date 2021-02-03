@@ -4,12 +4,21 @@ import (
 	"context"
 	"strings"
 
+	"github.com/mediocregopher/radix/v3"
+
 	"go-feedmaker/entity"
 	"go-feedmaker/interactor"
 )
 
-type feedRepo struct {
-}
+type (
+	RedisClient interface {
+		Do(action radix.Action) error
+	}
+
+	feedRepo struct {
+		client RedisClient
+	}
+)
 
 func (r *feedRepo) GetFactoryByGenerationType(generationType string) (interactor.FeedFactory, error) {
 	switch {
