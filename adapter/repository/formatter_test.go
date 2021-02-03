@@ -131,10 +131,10 @@ func TestCsvFormatter_FormatFiles(t *testing.T) {
 			)
 
 			var wg sync.WaitGroup
-			wg.Add(2)
-			ctx, cancelProducing := context.WithCancel(context.Background())
+			produceRecordsCtx, cancelProducing := context.WithCancel(context.Background())
 			defer cancelProducing()
 			go func() {
+				wg.Add(1)
 				defer wg.Done()
 				gotErr := formatter.FormatFiles(tc.ctx)
 				if gotErr != nil {
@@ -143,8 +143,9 @@ func TestCsvFormatter_FormatFiles(t *testing.T) {
 				assert.Equal(t, tc.wantErr, gotErr)
 			}()
 			go func() {
+				wg.Add(1)
 				defer wg.Done()
-				produceRecords(ctx, tc.fields.inStream, tc.records)
+				produceRecords(produceRecordsCtx, tc.fields.inStream, tc.records)
 			}()
 
 			var linesChecked int
