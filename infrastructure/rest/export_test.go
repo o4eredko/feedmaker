@@ -10,6 +10,6 @@ func (h *handler) Feeds() interactor.FeedInteractor {
 	return h.feeds
 }
 
-func (a *API) Server() *http.Server {
-	return a.server
+func (s *APIServer) Server() *http.Server {
+	return s.server
 }
