@@ -49,8 +49,11 @@ func (r *feedRepo) StoreGeneration(ctx context.Context, generation *entity.Gener
 	hashArgs := new(redis.Args).
 		Add(generation.ID).
 		Add("type", generation.Type).
-		Add("start_time", generation.StartTime.Unix()).
-		Add("end_time", generation.EndTime.Unix())
+		Add("progress", generation.Progress).
+		Add("start_time", generation.StartTime.Unix())
+	if !generation.EndTime.IsZero() {
+		hashArgs = hashArgs.Add("end_time", generation.EndTime.Unix())
+	}
 	r.client.Send("HMSET", hashArgs...)
 
 	_, err := r.client.Do("EXEC")
@@ -97,6 +100,22 @@ func makeGenerationFromRedisValues(v map[string]string) (*entity.Generation, err
 		generation.EndTime = time.Unix(startTime, 0)
 	}
 	return generation, nil
+}
+
+func (r *feedRepo) UpdateProgress(ctx context.Context, generation *entity.Generation) error {
+	hashArgs := new(redis.Args).Add(generation.ID).Add("progress", generation.Progress)
+	if !generation.EndTime.IsZero() {
+		hashArgs = hashArgs.Add("end_time", generation.EndTime.Unix())
+	}
+	_, err := r.client.Do("HSET", hashArgs...)
+	if err != nil {
+		return err
+	}
+	_, err = r.client.Do("PUBLISH", generation.ID, generation.Progress)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r *feedRepo) ListAllowedTypes(ctx context.Context) ([]string, error) {
