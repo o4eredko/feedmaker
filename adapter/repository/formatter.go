@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"path"
 
 	"github.com/google/uuid"
 	"github.com/inhies/go-bytesize"
@@ -82,7 +83,7 @@ func (f *CsvFormatter) writeCSVToBuffer(record []string) error {
 }
 
 func (f *CsvFormatter) flushBufferToFile() (io.ReadCloser, error) {
-	file, err := os.Create("/tmp/test/" + uuid.NewString() + ".csv")
+	file, err := os.Create(path.Join("/tmp", uuid.NewString()+".csv"))
 	if err != nil {
 		return nil, err
 	}

@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/mediocregopher/radix/v3"
+	"github.com/gomodule/redigo/redis"
 )
 
 var (
@@ -18,25 +18,28 @@ type (
 		Host        string
 		Port        string
 		ConnTimeout time.Duration
-		PoolSize    int
 	}
 
 	RedisDialer interface {
-		Dial(network, addr string, options ...radix.DialOpt) (RedisConnection, error)
-	}
-
-	RedisConnection interface {
-		radix.Conn
+		Dial(network, addr string, options ...redis.DialOption) (RedisConnection, error)
 	}
 
 	RedisClient interface {
-		radix.Client
+		Do(commandName string, args ...interface{}) (reply interface{}, err error)
+		Send(commandName string, args ...interface{}) error
+		Flush() error
+		Receive() (reply interface{}, err error)
+	}
+
+	RedisConnection interface {
+		redis.Conn
 	}
 
 	RedisGateway struct {
-		Config RedisConfig
-		Dialer RedisDialer
-		pool   RedisClient
+		Config     RedisConfig
+		Dialer     RedisDialer
+		connection RedisConnection
+		RedisClient
 	}
 )
 
@@ -44,33 +47,19 @@ func (c RedisConfig) Addr() string {
 	return fmt.Sprintf("%s:%s", c.Host, c.Port)
 }
 
-func (r *RedisGateway) connect(network, addr string) (radix.Conn, error) {
-	return r.Dialer.Dial(network, addr, radix.DialConnectTimeout(r.Config.ConnTimeout))
-}
-
 func (r *RedisGateway) Connect() error {
-	pool, err := radix.NewPool(
-		"tcp", r.Config.Addr(),
-		r.Config.PoolSize,
-		radix.PoolConnFunc(r.connect),
-	)
+	conn, err := r.Dialer.Dial("tcp", r.Config.Addr(), redis.DialConnectTimeout(r.Config.ConnTimeout))
 	if err != nil {
 		return err
 	}
-	r.pool = pool
+	r.connection = conn
+	r.RedisClient = conn
 	return nil
 }
 
-func (r *RedisGateway) Do(action radix.Action) error {
-	if reflect.ValueOf(r.pool).IsNil() {
-		return ErrRedisDisconnected
-	}
-	return r.pool.Do(action)
-}
-
 func (r *RedisGateway) Disconnect() error {
-	if reflect.ValueOf(r.pool).IsNil() {
+	if reflect.ValueOf(r.connection).IsNil() {
 		return ErrRedisDisconnected
 	}
-	return r.pool.Close()
+	return r.connection.Close()
 }

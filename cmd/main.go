@@ -2,46 +2,49 @@ package main
 
 import (
 	"context"
-	"io"
 	"time"
 
-	"github.com/inhies/go-bytesize"
+	"github.com/gomodule/redigo/redis"
+	"github.com/google/uuid"
 
 	"go-feedmaker/adapter/repository"
+	"go-feedmaker/entity"
+	"go-feedmaker/infrastructure/gateway"
 )
 
+type redisDialer struct{}
+
+func (r *redisDialer) Dial(network, addr string, options ...redis.DialOption) (gateway.RedisConnection, error) {
+	return redis.Dial(network, addr, options...)
+}
+
 func main() {
-	inStream := make(chan []string)
-	outStream := make(chan io.ReadCloser)
-	buffer := repository.NewLimitBuffer(bytesize.B*27, 3)
-	formatter := repository.NewCsvFormatter(inStream, outStream, buffer)
-	go func() {
-		if err := formatter.FormatFiles(context.Background()); err != nil {
-			panic(err)
-		}
-	}()
-	go func() {
-		inStream <- []string{"a1", "b1", "c1"}
-		time.Sleep(time.Millisecond * 100)
+	redisGateway := &gateway.RedisGateway{
+		Config: gateway.RedisConfig{
+			Host:        "localhost",
+			Port:        "6379",
+			ConnTimeout: time.Second,
+		},
+		Dialer: new(redisDialer),
+	}
+	if err := redisGateway.Connect(); err != nil {
+		panic(err)
+	}
 
-		inStream <- []string{"a2", "b2", "c2"}
-		time.Sleep(time.Millisecond * 100)
+	repo := repository.NewFeedRepo(redisGateway)
+	generation := &entity.Generation{
+		ID:        uuid.New().String(),
+		Type:      "test type",
+		Progress:  100,
+		StartTime: time.Now(),
+		EndTime:   time.Now(),
+	}
 
-		inStream <- []string{"a3", "b3", "c3"}
-		time.Sleep(time.Millisecond * 100)
+	if err := repo.StoreGeneration(context.Background(), generation); err != nil {
+		panic(err)
+	}
 
-		inStream <- []string{"a4", "b4", "c4"}
-		time.Sleep(time.Millisecond * 100)
-
-		inStream <- []string{"a5", "b5", "c5"}
-		time.Sleep(time.Millisecond * 100)
-
-		inStream <- []string{"a6", "b6", "c6"}
-		time.Sleep(time.Millisecond * 100)
-
-		close(inStream)
-	}()
-	for file := range outStream {
-		defer file.Close()
+	if err := redisGateway.Disconnect(); err != nil {
+		panic(err)
 	}
 }
