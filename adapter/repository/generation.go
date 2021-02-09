@@ -2,7 +2,10 @@ package repository
 
 import (
 	"context"
+	"fmt"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gomodule/redigo/redis"
 
@@ -21,7 +24,6 @@ type (
 	feedRepo struct {
 		client    RedisClient
 		idSetName string
-		hashName  string
 	}
 )
 
@@ -29,7 +31,6 @@ func NewFeedRepo(client RedisClient) *feedRepo {
 	return &feedRepo{
 		client:    client,
 		idSetName: "generationIDs",
-		hashName:  "generations",
 	}
 }
 
@@ -45,7 +46,11 @@ func (r *feedRepo) GetFactoryByGenerationType(generationType string) (interactor
 func (r *feedRepo) StoreGeneration(ctx context.Context, generation *entity.Generation) error {
 	r.client.Send("MULTI")
 	r.client.Send("SADD", r.idSetName, generation.ID)
-	hashArgs := new(redis.Args).Add(generation.ID).AddFlat(generation)
+	hashArgs := new(redis.Args).
+		Add(generation.ID).
+		Add("type", generation.Type).
+		Add("start_time", generation.StartTime.Unix()).
+		Add("end_time", generation.EndTime.Unix())
 	r.client.Send("HMSET", hashArgs...)
 
 	_, err := r.client.Do("EXEC")
@@ -53,8 +58,45 @@ func (r *feedRepo) StoreGeneration(ctx context.Context, generation *entity.Gener
 }
 
 func (r *feedRepo) ListGenerations(ctx context.Context) ([]*entity.Generation, error) {
-	// res := make([]*entity.Generation, 0)
-	panic("implement me")
+	generations := make([]*entity.Generation, 0)
+	generationIDs, err := redis.Strings(r.client.Do("SMEMBERS", r.idSetName))
+	if err != nil {
+		return nil, err
+	}
+	for _, id := range generationIDs {
+		stringMap, err := redis.StringMap(r.client.Do("HGETALL", id))
+		if err != nil {
+			return nil, err
+		}
+		stringMap["id"] = id
+		generation, err := makeGenerationFromRedisValues(stringMap)
+		if err != nil {
+			return nil, err
+		}
+		generations = append(generations, generation)
+	}
+	return generations, nil
+}
+
+func makeGenerationFromRedisValues(v map[string]string) (*entity.Generation, error) {
+	generation := new(entity.Generation)
+	generation.ID = v["id"]
+	generation.Type = v["type"]
+	if timestamp, ok := v["start_time"]; ok && len(timestamp) > 0 {
+		startTime, err := strconv.ParseInt(timestamp, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("%s 'start_time': %w", generation.ID, entity.ErrInvalidTimestamp)
+		}
+		generation.StartTime = time.Unix(startTime, 0)
+	}
+	if timestamp, ok := v["end_time"]; ok && len(timestamp) > 0 {
+		startTime, err := strconv.ParseInt(timestamp, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("%s 'end_time': %w", generation.ID, entity.ErrInvalidTimestamp)
+		}
+		generation.EndTime = time.Unix(startTime, 0)
+	}
+	return generation, nil
 }
 
 func (r *feedRepo) ListAllowedTypes(ctx context.Context) ([]string, error) {

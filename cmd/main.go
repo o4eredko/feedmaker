@@ -5,10 +5,9 @@ import (
 	"time"
 
 	"github.com/gomodule/redigo/redis"
-	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 
 	"go-feedmaker/adapter/repository"
-	"go-feedmaker/entity"
 	"go-feedmaker/infrastructure/gateway"
 )
 
@@ -32,16 +31,25 @@ func main() {
 	}
 
 	repo := repository.NewFeedRepo(redisGateway)
-	generation := &entity.Generation{
-		ID:        uuid.New().String(),
-		Type:      "test type",
-		Progress:  100,
-		StartTime: time.Now(),
-		EndTime:   time.Now(),
-	}
 
-	if err := repo.StoreGeneration(context.Background(), generation); err != nil {
+	// generation := &entity.Generation{
+	// 	ID:        uuid.New().String(),
+	// 	Type:      "test type",
+	// 	Progress:  100,
+	// 	StartTime: time.Now(),
+	// 	EndTime:   time.Now(),
+	// }
+	// if err := repo.StoreGeneration(context.Background(), generation); err != nil {
+	// 	panic(err)
+	// }
+
+	generations, err := repo.ListGenerations(context.Background())
+	if err != nil {
 		panic(err)
+	}
+	// _ = generations
+	for _, generation := range generations {
+		log.Info().Msgf("%s", generation)
 	}
 
 	if err := redisGateway.Disconnect(); err != nil {
