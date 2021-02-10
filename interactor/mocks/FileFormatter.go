@@ -5,8 +5,6 @@ package mocks
 import (
 	context "context"
 
-	io "io"
-
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -15,30 +13,21 @@ type FileFormatter struct {
 	mock.Mock
 }
 
-// OnProgress provides a mock function with given fields: _a0
-func (_m *FileFormatter) OnProgress(_a0 func(string, int)) {
-	_m.Called(_a0)
-}
-
-// StreamFiles provides a mock function with given fields: ctx
-func (_m *FileFormatter) StreamFiles(ctx context.Context) (<-chan io.Reader, error) {
+// FormatFiles provides a mock function with given fields: ctx
+func (_m *FileFormatter) FormatFiles(ctx context.Context) error {
 	ret := _m.Called(ctx)
 
-	var r0 <-chan io.Reader
-	if rf, ok := ret.Get(0).(func(context.Context) <-chan io.Reader); ok {
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
 		r0 = rf(ctx)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(<-chan io.Reader)
-		}
+		r0 = ret.Error(0)
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
-	} else {
-		r1 = ret.Error(1)
-	}
+	return r0
+}
 
-	return r0, r1
+// OnProgress provides a mock function with given fields: _a0
+func (_m *FileFormatter) OnProgress(_a0 func(uint)) {
+	_m.Called(_a0)
 }

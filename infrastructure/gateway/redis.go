@@ -3,10 +3,11 @@ package gateway
 import (
 	"errors"
 	"fmt"
-	"reflect"
 	"time"
 
 	"github.com/gomodule/redigo/redis"
+
+	"go-feedmaker/adapter/repository"
 )
 
 var (
@@ -31,6 +32,12 @@ type (
 		Receive() (reply interface{}, err error)
 	}
 
+	PubSub interface {
+		Subscribe(channel ...interface{}) error
+		Unsubscribe(channel ...interface{}) error
+		Receive() interface{}
+	}
+
 	RedisConnection interface {
 		redis.Conn
 	}
@@ -39,7 +46,7 @@ type (
 		Config     RedisConfig
 		Dialer     RedisDialer
 		connection RedisConnection
-		RedisClient
+		pool       *redis.Pool
 	}
 )
 
@@ -47,19 +54,40 @@ func (c RedisConfig) Addr() string {
 	return fmt.Sprintf("%s:%s", c.Host, c.Port)
 }
 
-func (r *RedisGateway) Connect() error {
+func (r *RedisGateway) dial() (redis.Conn, error) {
 	conn, err := r.Dialer.Dial("tcp", r.Config.Addr(), redis.DialConnectTimeout(r.Config.ConnTimeout))
-	if err != nil {
-		return err
+	return conn, err
+}
+
+func (r *RedisGateway) Connect() error {
+	r.pool = &redis.Pool{
+		Dial:        r.dial,
+		MaxIdle:     5,
+		MaxActive:   1,
+		IdleTimeout: time.Minute,
+		Wait:        true,
 	}
-	r.connection = conn
-	r.RedisClient = conn
-	return nil
+	return r.ping()
+}
+
+func (r *RedisGateway) ping() error {
+	conn := r.pool.Get()
+	defer conn.Close()
+	_, err := conn.Do("PING")
+	return err
+}
+
+func (r *RedisGateway) Connection() repository.Connection {
+	return r.pool.Get()
+}
+
+func (r *RedisGateway) PubSub() repository.PubSub {
+	return &redis.PubSubConn{Conn: r.pool.Get()}
 }
 
 func (r *RedisGateway) Disconnect() error {
-	if reflect.ValueOf(r.connection).IsNil() {
+	if r.pool == nil {
 		return ErrRedisDisconnected
 	}
-	return r.connection.Close()
+	return r.pool.Close()
 }

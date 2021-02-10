@@ -35,17 +35,19 @@ type (
 
 	FileFormatter interface {
 		FormatFiles(ctx context.Context) error
+		OnProgress(func(progress uint))
 	}
 
 	FeedRepo interface {
 		GetFactoryByGenerationType(generationType string) (FeedFactory, error)
 		StoreGeneration(ctx context.Context, generation *entity.Generation) (*entity.Generation, error)
-		UpdateProgress(ctx context.Context, generationID string, progress int) error
+		UpdateProgress(ctx context.Context, generation *entity.Generation) error
 		ListGenerations(ctx context.Context) ([]*entity.Generation, error)
 		ListAllowedTypes(ctx context.Context) ([]string, error)
 		IsAllowedType(ctx context.Context, generationType string) (bool, error)
 		IsCanceled(ctx context.Context, generationID string) (bool, error)
 		CancelGeneration(ctx context.Context, id string) error
+		OnGenerationCanceled(ctx context.Context, id string, callback func()) error
 	}
 
 	Presenter interface {
@@ -97,6 +99,7 @@ func (i *feedInteractor) GenerateFeed(ctx context.Context, generationType string
 
 	dataFetcher := factory.CreateDataFetcher(recordStream)
 	fileFormatter := factory.CreateFileFormatter(recordStream, fileStream)
+	fileFormatter.OnProgress(i.onProgress(generation))
 
 	go i.fetchData(ctx, dataFetcher, errStream)
 	go i.formatFiles(ctx, fileFormatter, errStream)
@@ -131,27 +134,21 @@ func (i *feedInteractor) formatFiles(ctx context.Context, formatter FileFormatte
 	}
 }
 
-func (i *feedInteractor) onProgress(generationID string, progress int) {
-	err := i.feeds.UpdateProgress(context.Background(), generationID, progress)
-	if err != nil {
-		log.Error().Err(err).Msgf(
-			"Cannot set progress for generation = %s progress = %d",
-			generationID, progress,
-		)
+func (i *feedInteractor) onProgress(generation *entity.Generation) func(progress uint) {
+	return func(progress uint) {
+		generation.SetProgress(progress)
+		if err := i.feeds.UpdateProgress(context.Background(), generation); err != nil {
+			log.Error().Err(err).
+				Msgf("Cannot update progress for %s %v", generation.ID, progress)
+		}
 	}
 }
 
-func (i *feedInteractor) onGenerationCanceled(ctx context.Context, generationID string, f func()) {
-	for {
-		isRejected, err := i.feeds.IsCanceled(ctx, generationID)
-		if err != nil {
-			log.Error().
-				Err(err).
-				Msgf("Cannot check if generation with id %s rejected", generationID)
-		} else if isRejected {
-			f()
-		}
-		time.Sleep(time.Second)
+func (i *feedInteractor) onGenerationCanceled(ctx context.Context, generationID string, callback func()) {
+	err := i.feeds.OnGenerationCanceled(ctx, generationID, callback)
+	if err != nil {
+		log.Error().Err(err).
+			Msgf("Cannot check if generation with id %s canceled", generationID)
 	}
 }
 
