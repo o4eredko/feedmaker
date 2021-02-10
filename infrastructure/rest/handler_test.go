@@ -216,16 +216,16 @@ func Test_handler_CancelGeneration(t *testing.T) {
 		r              *http.Request
 		generationType string
 	}
-	defaultArgs := func(generationType string) *args {
-		request := httptest.NewRequest(http.MethodDelete, "/generations/"+generationType, nil)
-		if generationType != "" {
-			vars := map[string]string{"generation-type": generationType}
+	defaultArgs := func(generationID string) *args {
+		request := httptest.NewRequest(http.MethodDelete, "/generations/"+generationID, nil)
+		if generationID != "" {
+			vars := map[string]string{"generation-id": generationID}
 			request = mux.SetURLVars(request, vars)
 		}
 		return &args{
 			w:              httptest.NewRecorder(),
 			r:              request,
-			generationType: generationType,
+			generationType: generationID,
 		}
 	}
 	testCases := []struct {
@@ -258,7 +258,7 @@ func Test_handler_CancelGeneration(t *testing.T) {
 			wantStatusCode: http.StatusInternalServerError,
 		},
 		{
-			name:           "empty generation type",
+			name:           "empty generation id",
 			fields:         defaultHandlerFields(),
 			setupMocks:     func(fields *handlerFields, args *args) {},
 			args:           defaultArgs(""),

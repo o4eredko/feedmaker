@@ -3,6 +3,7 @@ package rest
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -55,12 +56,12 @@ func (h *handler) GenerateFeed(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) CancelGeneration(w http.ResponseWriter, r *http.Request) {
-	generationType, err := h.extractGenerationType(r)
+	generationID, err := h.extractGenerationID(r)
 	if err != nil {
 		h.errorResponse(w, http.StatusBadRequest, err)
 		return
 	}
-	if err := h.feeds.CancelGeneration(r.Context(), generationType); err != nil {
+	if err := h.feeds.CancelGeneration(r.Context(), generationID); err != nil {
 		h.errorResponse(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -84,10 +85,18 @@ func (h *handler) jsonResponse(w http.ResponseWriter, code int, body interface{}
 }
 
 func (h *handler) extractGenerationType(r *http.Request) (string, error) {
+	return h.extractFromURL(r, "generation-type")
+}
+
+func (h *handler) extractGenerationID(r *http.Request) (string, error) {
+	return h.extractFromURL(r, "generation-id")
+}
+
+func (h *handler) extractFromURL(r *http.Request, key string) (string, error) {
 	vars := mux.Vars(r)
-	generationType, found := vars["generation-type"]
+	value, found := vars[key]
 	if !found {
-		return "", errors.New("generation wasn't passed")
+		return "", errors.New(fmt.Sprintf("%s wasn't passed", key))
 	}
-	return generationType, nil
+	return value, nil
 }
