@@ -3,7 +3,6 @@ package scheduler_test
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -94,7 +93,7 @@ func TestScheduler_ScheduleTask(t *testing.T) {
 	}
 	defaultArgs := func() *args {
 		cmd := new(mocks.Runner)
-		schedule := task.NewSchedule(time.Now().UTC(), time.Second*42)
+		schedule := defaultSchedule
 		return &args{
 			taskID: defaultTaskID,
 			task:   task.NewTask(cmd, schedule),
@@ -263,6 +262,70 @@ func TestScheduler_RemoveTask(t *testing.T) {
 			testsCase.fields.cron.AssertExpectations(t)
 			testsCase.fields.saver.AssertExpectations(t)
 			testsCase.fields.mapper.AssertExpectations(t)
+		})
+	}
+}
+
+func TestScheduler_ListSchedules(t *testing.T) {
+	testCases := []struct {
+		name          string
+		fields        *schedulerFields
+		setupMocks    func(*schedulerFields)
+		wantSchedules map[scheduler.TaskID]*task.Schedule
+		wantErr       error
+	}{
+		{
+			name:   "succeed",
+			fields: defaultSchedulerFields(),
+			setupMocks: func(fields *schedulerFields) {
+				fields.saver.
+					On("ListScheduledTaskIDs").
+					Return(defaultScheduledTaskIDs, nil)
+				for id, schedule := range defaultTaskSchedules {
+					fields.saver.
+						On("Load", id).
+						Return(schedule, nil)
+				}
+			},
+			wantSchedules: defaultTaskSchedules,
+		},
+		{
+			name:   "saver.ListScheduledTaskIDs returns error",
+			fields: defaultSchedulerFields(),
+			setupMocks: func(fields *schedulerFields) {
+				fields.saver.
+					On("ListScheduledTaskIDs").
+					Return(nil, defaultErr)
+			},
+			wantErr: defaultErr,
+		},
+		{
+			name:   "saver.Load returns error",
+			fields: defaultSchedulerFields(),
+			setupMocks: func(fields *schedulerFields) {
+				fields.saver.
+					On("ListScheduledTaskIDs").
+					Return(defaultScheduledTaskIDs, nil)
+				fields.saver.
+					On("Load", defaultScheduledTaskIDs[0]).
+					Return(nil, defaultErr)
+			},
+			wantErr: defaultErr,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.setupMocks(testCase.fields)
+			s := scheduler.New(testCase.fields.cron, testCase.fields.saver)
+			s.SetMapper(testCase.fields.mapper)
+
+			gotSchedules, gotErr := s.ListSchedules()
+			assert.Equal(t, testCase.wantSchedules, gotSchedules)
+			assert.Equal(t, testCase.wantErr, gotErr)
+
+			testCase.fields.cron.AssertExpectations(t)
+			testCase.fields.saver.AssertExpectations(t)
+			testCase.fields.mapper.AssertExpectations(t)
 		})
 	}
 }

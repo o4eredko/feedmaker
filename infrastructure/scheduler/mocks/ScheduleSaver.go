@@ -29,6 +29,29 @@ func (_m *ScheduleSaver) Delete(_a0 scheduler.TaskID) error {
 	return r0
 }
 
+// ListScheduledTaskIDs provides a mock function with given fields:
+func (_m *ScheduleSaver) ListScheduledTaskIDs() ([]scheduler.TaskID, error) {
+	ret := _m.Called()
+
+	var r0 []scheduler.TaskID
+	if rf, ok := ret.Get(0).(func() []scheduler.TaskID); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]scheduler.TaskID)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // Load provides a mock function with given fields: _a0
 func (_m *ScheduleSaver) Load(_a0 scheduler.TaskID) (*task.Schedule, error) {
 	ret := _m.Called(_a0)

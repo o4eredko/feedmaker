@@ -28,7 +28,7 @@ type (
 		Store(TaskID, *task.Schedule) error
 		Load(TaskID) (*task.Schedule, error)
 		Delete(TaskID) error
-		// ListScheduledTasks() ([]TaskID, error)
+		ListScheduledTaskIDs() ([]TaskID, error)
 	}
 
 	TaskIDMapper interface {
@@ -76,4 +76,20 @@ func (s *Scheduler) RemoveTask(taskID TaskID) error {
 		return err
 	}
 	return s.scheduleSaver.Delete(taskID)
+}
+
+func (s *Scheduler) ListSchedules() (map[TaskID]*task.Schedule, error) {
+	ids, err := s.scheduleSaver.ListScheduledTaskIDs()
+	if err != nil {
+		return nil, err
+	}
+	schedules := make(map[TaskID]*task.Schedule)
+	for _, id := range ids {
+		schedule, err := s.scheduleSaver.Load(id)
+		if err != nil {
+			return nil, err
+		}
+		schedules[id] = schedule
+	}
+	return schedules, err
 }
