@@ -22,7 +22,7 @@ func NewRouter(handler Handler) http.Handler {
 	generations.HandleFunc("", handler.ListGenerations).Methods(http.MethodGet)
 	generations.HandleFunc("/types", handler.ListGenerationTypes).Methods(http.MethodGet)
 	generations.HandleFunc("/{generation-type}", handler.GenerateFeed).Methods(http.MethodPost)
-	generations.HandleFunc("/{generation-type}", handler.CancelGeneration).Methods(http.MethodDelete)
+	generations.HandleFunc("/{generation-id}", handler.CancelGeneration).Methods(http.MethodDelete)
 
 	return router
 }
