@@ -36,8 +36,8 @@ func getNowTimestamp() time.Time {
 func TestNewScheduleWithSpecificStartTimestamp(t *testing.T) {
 	fields := defaultScheduleWithSpecificStartTimestampFields()
 	s := task.NewScheduleWithSpecificStartTimestamp(fields.startTimestamp, fields.delayInterval)
-	assert.Equal(t, fields.startTimestamp, s.StartTimestamp)
-	assert.Equal(t, fields.delayInterval, s.DelayInterval)
+	assert.Equal(t, fields.startTimestamp, s.StartTimestamp())
+	assert.Equal(t, fields.delayInterval, s.FireInterval())
 }
 
 func TestScheduleWithSpecificStartTimestamp_Next(t *testing.T) {
@@ -59,10 +59,10 @@ func TestScheduleWithSpecificStartTimestamp_Next(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			s := &task.ScheduleWithSpecificStartTimestamp{
-				StartTimestamp: testCase.fields.startTimestamp,
-				DelayInterval:  testCase.fields.delayInterval,
-			}
+			s := task.NewScheduleWithSpecificStartTimestamp(
+				testCase.fields.startTimestamp,
+				testCase.fields.delayInterval,
+			)
 
 			nowTimestamp := getNowTimestamp()
 			elapsed := nowTimestamp.Sub(testCase.fields.startTimestamp)

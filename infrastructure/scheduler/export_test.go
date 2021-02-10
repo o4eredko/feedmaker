@@ -6,10 +6,10 @@ func (s *Scheduler) Cron() Croner {
 	return s.cron
 }
 
-func (s *Scheduler) TaskIDMapping() TaskIDMapper {
-	return s.taskIDMapping
+func (s *Scheduler) Mapper() TaskIDMapper {
+	return s.mapper
 }
 
 func (m *Mapper) SetMapping(mapping map[TaskID]cron.EntryID) {
-	m.taskIDMapping = mapping
+	m.mapping = mapping
 }

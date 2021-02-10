@@ -10,7 +10,7 @@ import (
 type (
 	Mapper struct {
 		readWriteLocker sync.RWMutex
-		taskIDMapping   map[TaskID]cron.EntryID
+		mapping         map[TaskID]cron.EntryID
 	}
 )
 
@@ -21,24 +21,24 @@ var (
 
 func NewMapper() *Mapper {
 	return &Mapper{
-		taskIDMapping: make(map[TaskID]cron.EntryID),
+		mapping: make(map[TaskID]cron.EntryID),
 	}
 }
 
 func (m *Mapper) Store(taskID TaskID, entryID cron.EntryID) error {
 	m.readWriteLocker.Lock()
 	defer m.readWriteLocker.Unlock()
-	if _, exists := m.taskIDMapping[taskID]; exists {
+	if _, exists := m.mapping[taskID]; exists {
 		return ErrTaskAlreadyExists
 	}
-	m.taskIDMapping[taskID] = entryID
+	m.mapping[taskID] = entryID
 	return nil
 }
 
 func (m *Mapper) Load(taskID TaskID) (cron.EntryID, error) {
 	m.readWriteLocker.RLock()
 	defer m.readWriteLocker.RUnlock()
-	entryID, exists := m.taskIDMapping[taskID]
+	entryID, exists := m.mapping[taskID]
 	if !exists {
 		return 0, ErrTaskNotFound
 	}
@@ -48,9 +48,9 @@ func (m *Mapper) Load(taskID TaskID) (cron.EntryID, error) {
 func (m *Mapper) Delete(taskID TaskID) error {
 	m.readWriteLocker.Lock()
 	defer m.readWriteLocker.Unlock()
-	if _, exists := m.taskIDMapping[taskID]; !exists {
+	if _, exists := m.mapping[taskID]; !exists {
 		return ErrTaskNotFound
 	}
-	delete(m.taskIDMapping, taskID)
+	delete(m.mapping, taskID)
 	return nil
 }

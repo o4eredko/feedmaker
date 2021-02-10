@@ -4,8 +4,8 @@ import "time"
 
 type (
 	ScheduleWithSpecificStartTimestamp struct {
-		StartTimestamp         time.Time
-		DelayInterval          time.Duration
+		startTimestamp         time.Time
+		fireInterval           time.Duration
 		startTimestampExceeded bool
 	}
 )
@@ -15,9 +15,17 @@ func NewScheduleWithSpecificStartTimestamp(
 	delayInterval time.Duration,
 ) *ScheduleWithSpecificStartTimestamp {
 	return &ScheduleWithSpecificStartTimestamp{
-		StartTimestamp: startTimestamp,
-		DelayInterval:  delayInterval,
+		startTimestamp: startTimestamp,
+		fireInterval:   delayInterval,
 	}
+}
+
+func (s *ScheduleWithSpecificStartTimestamp) StartTimestamp() time.Time {
+	return s.startTimestamp
+}
+
+func (s *ScheduleWithSpecificStartTimestamp) FireInterval() time.Duration {
+	return s.fireInterval
 }
 
 func (s *ScheduleWithSpecificStartTimestamp) Next(nowTimestamp time.Time) time.Time {
@@ -30,18 +38,18 @@ func (s *ScheduleWithSpecificStartTimestamp) Next(nowTimestamp time.Time) time.T
 }
 
 func (s *ScheduleWithSpecificStartTimestamp) getAlignedStartTimestamp(nowTimestamp time.Time) time.Time {
-	startTimestamp := s.StartTimestamp
+	startTimestamp := s.startTimestamp
 	if startTimestamp.After(nowTimestamp) {
 		return startTimestamp
 	}
 	elapsedTimeRoundedToInterval := nowTimestamp.
 		Sub(startTimestamp).
-		Round(s.DelayInterval)
+		Round(s.fireInterval)
 	return startTimestamp.Add(elapsedTimeRoundedToInterval)
 }
 
 func (s *ScheduleWithSpecificStartTimestamp) getNextTimestamp(nowTimestamp time.Time) time.Time {
 	return nowTimestamp.
-		Add(s.DelayInterval).
+		Add(s.fireInterval).
 		Truncate(time.Second)
 }

@@ -30,15 +30,15 @@ func (_m *Task) Cmd() scheduler.Runner {
 }
 
 // Schedule provides a mock function with given fields:
-func (_m *Task) Schedule() scheduler.Nexter {
+func (_m *Task) Schedule() scheduler.Schedule {
 	ret := _m.Called()
 
-	var r0 scheduler.Nexter
-	if rf, ok := ret.Get(0).(func() scheduler.Nexter); ok {
+	var r0 scheduler.Schedule
+	if rf, ok := ret.Get(0).(func() scheduler.Schedule); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(scheduler.Nexter)
+			r0 = ret.Get(0).(scheduler.Schedule)
 		}
 	}
 

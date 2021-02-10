@@ -19,7 +19,7 @@ var (
 func getMockedTask() *mocks.Task {
 	mockedTask := new(mocks.Task)
 	mockedTask.
-		On("Schedule").Return(new(mocks.Nexter)).
+		On("Schedule").Return(new(mocks.Schedule)).
 		On("Cmd").Return(new(mocks.Runner))
 	return mockedTask
 }

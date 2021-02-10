@@ -23,11 +23,17 @@ type (
 
 	Task interface {
 		Cmd() Runner
-		Schedule() Nexter
+		Schedule() Schedule
 	}
 
 	Runner interface {
 		Run()
+	}
+
+	Schedule interface {
+		Nexter
+		StartTimestamp() time.Time
+		FireInterval() time.Duration
 	}
 
 	Nexter interface {
@@ -35,8 +41,8 @@ type (
 	}
 
 	Scheduler struct {
-		cron          Croner
-		taskIDMapping TaskIDMapper
+		cron   Croner
+		mapper TaskIDMapper
 	}
 
 	TaskIDMapper interface {
@@ -52,10 +58,10 @@ type (
 	}
 )
 
-func New(cron Croner, taskIDMapper TaskIDMapper) *Scheduler {
+func New(cron Croner, mapper TaskIDMapper) *Scheduler {
 	return &Scheduler{
-		taskIDMapping: taskIDMapper,
-		cron:          cron,
+		mapper: mapper,
+		cron:   cron,
 	}
 }
 
@@ -68,18 +74,18 @@ func (s *Scheduler) Stop() context.Context {
 }
 
 func (s *Scheduler) AddTask(taskID TaskID, task Task) error {
-	if _, err := s.taskIDMapping.Load(taskID); err != nil {
+	if _, err := s.mapper.Load(taskID); err != nil {
 		return err
 	}
 	entryID := s.cron.Schedule(task.Schedule(), task.Cmd())
-	return s.taskIDMapping.Store(taskID, entryID)
+	return s.mapper.Store(taskID, entryID)
 }
 
 func (s *Scheduler) RemoveTask(taskID TaskID) error {
-	entryID, err := s.taskIDMapping.Load(taskID)
+	entryID, err := s.mapper.Load(taskID)
 	if err != nil {
 		return err
 	}
 	s.cron.Remove(entryID)
-	return s.taskIDMapping.Delete(taskID)
+	return s.mapper.Delete(taskID)
 }
