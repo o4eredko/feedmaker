@@ -141,6 +141,20 @@ func (_m *FeedRepo) ListGenerations(ctx context.Context) ([]*entity.Generation, 
 	return r0, r1
 }
 
+// OnGenerationCanceled provides a mock function with given fields: ctx, id, callback
+func (_m *FeedRepo) OnGenerationCanceled(ctx context.Context, id string, callback func()) error {
+	ret := _m.Called(ctx, id, callback)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, func()) error); ok {
+		r0 = rf(ctx, id, callback)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // StoreGeneration provides a mock function with given fields: ctx, generation
 func (_m *FeedRepo) StoreGeneration(ctx context.Context, generation *entity.Generation) (*entity.Generation, error) {
 	ret := _m.Called(ctx, generation)
@@ -164,13 +178,13 @@ func (_m *FeedRepo) StoreGeneration(ctx context.Context, generation *entity.Gene
 	return r0, r1
 }
 
-// UpdateProgress provides a mock function with given fields: ctx, generationID, progress
-func (_m *FeedRepo) UpdateProgress(ctx context.Context, generationID string, progress int) error {
-	ret := _m.Called(ctx, generationID, progress)
+// UpdateProgress provides a mock function with given fields: ctx, generation
+func (_m *FeedRepo) UpdateProgress(ctx context.Context, generation *entity.Generation) error {
+	ret := _m.Called(ctx, generation)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, int) error); ok {
-		r0 = rf(ctx, generationID, progress)
+	if rf, ok := ret.Get(0).(func(context.Context, *entity.Generation) error); ok {
+		r0 = rf(ctx, generation)
 	} else {
 		r0 = ret.Error(0)
 	}

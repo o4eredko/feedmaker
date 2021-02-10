@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/gomodule/redigo/redis"
+	"github.com/rs/zerolog/log"
 
 	"go-feedmaker/adapter/repository"
 	"go-feedmaker/entity"
@@ -29,45 +30,31 @@ func main() {
 	if err := redisGateway.Connect(); err != nil {
 		panic(err)
 	}
+	defer redisGateway.Disconnect()
 
 	repo := repository.NewFeedRepo(redisGateway)
 
-	// generation := &entity.Generation{
-	// 	ID:        uuid.New().String(),
-	// 	Type:      "test type",
-	// 	Progress:  100,
-	// 	StartTime: time.Now(),
-	// 	EndTime:   time.Now(),
-	// }
-	// if err := repo.StoreGeneration(context.Background(), generation); err != nil {
-	// 	panic(err)
-	// }
-
-	// generations, err := repo.ListGenerations(context.Background())
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// _ = generations
-	// for _, generation := range generations {
-	// 	log.Info().Msgf("%s", generation)
-	// }
-
 	generation := &entity.Generation{
-		ID:        "9840d3dd-4322-4f04-aed3-586fc842a05a",
+		ID:        "abc",
 		Type:      "test type",
-		Progress:  0,
+		Progress:  50,
 		StartTime: time.Now(),
 	}
 
-	for i := uint(1); i <= 100; i++ {
-		generation.SetProgress(i)
-		if err := repo.UpdateProgress(context.Background(), generation); err != nil {
-			panic(err)
-		}
-		time.Sleep(time.Millisecond * 50)
+	// go func() {
+	// 	time.Sleep(time.Second * 3)
+	// 	if err := repo.CancelGeneration(context.Background(), generation.ID); err != nil {
+	// 		panic(err)
+	// 	}
+	// }()
+	callback := func() {
+		log.Info().Msgf("Generation %s was canceled", generation.ID)
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
 
-	if err := redisGateway.Disconnect(); err != nil {
+	if err := repo.OnGenerationCanceled(ctx, generation.ID, callback); err != nil {
 		panic(err)
 	}
+	log.Info().Msgf("returned")
 }

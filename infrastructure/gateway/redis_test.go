@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gomodule/redigo/redis"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
@@ -14,7 +15,7 @@ import (
 type redisFields struct {
 	dialer     *mocks.RedisDialer
 	config     gateway.RedisConfig
-	connection *mocks.Connection
+	connection *mocks.RedisConnection
 }
 
 func defaultRedisFields() *redisFields {
@@ -25,7 +26,7 @@ func defaultRedisFields() *redisFields {
 			Port:        "5000",
 			ConnTimeout: time.Second,
 		},
-		connection: new(mocks.Connection),
+		connection: new(mocks.RedisConnection),
 	}
 }
 
@@ -41,7 +42,21 @@ func TestRedisGateway_Connect(t *testing.T) {
 			fields: defaultRedisFields(),
 			setupMocks: func(f *redisFields) {
 				f.dialer.On("Dial", "tcp", f.config.Addr(), mock.Anything).Return(f.connection, nil)
+				f.connection.On("Do", "").Return("", nil)
+				f.connection.On("Err").Return(nil)
+				f.connection.On("Do", "PING").Return("PONG", nil)
 			},
+		},
+		{
+			name:   "ping error",
+			fields: defaultRedisFields(),
+			setupMocks: func(f *redisFields) {
+				f.dialer.On("Dial", "tcp", f.config.Addr(), mock.Anything).Return(f.connection, nil)
+				f.connection.On("Do", "").Return("", nil)
+				f.connection.On("Err").Return(nil)
+				f.connection.On("Do", "PING").Return("", defaultErr)
+			},
+			wantErr: defaultErr,
 		},
 		{
 			name:   "dial error",
@@ -74,50 +89,28 @@ func TestRedisGateway_Disconnect(t *testing.T) {
 		name       string
 		fields     *redisFields
 		setupMocks func(f *redisFields)
+		pool       *redis.Pool
 		wantErr    error
 	}{
 		{
 			name:   "succeed",
 			fields: defaultRedisFields(),
-			setupMocks: func(f *redisFields) {
-				f.connection.On("Close").Return(nil)
-			},
+			pool:   new(redis.Pool),
 		},
 		{
-			name: "disconnected error",
-			fields: &redisFields{
-				dialer:     new(mocks.RedisDialer),
-				config:     gateway.RedisConfig{},
-				connection: nil,
-			},
-			setupMocks: func(f *redisFields) {},
-			wantErr:    gateway.ErrRedisDisconnected,
-		},
-		{
-			name:   "Close error",
-			fields: defaultRedisFields(),
-			setupMocks: func(f *redisFields) {
-				f.connection.On("Close").Return(defaultErr)
-			},
-			wantErr: defaultErr,
+			name:    "redis disconnected",
+			fields:  defaultRedisFields(),
+			wantErr: gateway.ErrRedisDisconnected,
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.setupMocks(testCase.fields)
-			redisGateway := gateway.RedisGateway{
-				Dialer: testCase.fields.dialer,
-				Config: testCase.fields.config,
-			}
-			redisGateway.SetConnection(testCase.fields.connection)
+			redisGateway := new(gateway.RedisGateway)
+			redisGateway.SetPool(testCase.pool)
 
 			gotErr := redisGateway.Disconnect()
 
 			assert.Equal(t, testCase.wantErr, gotErr)
-			testCase.fields.dialer.AssertExpectations(t)
-			if testCase.fields.connection != nil {
-				testCase.fields.connection.AssertExpectations(t)
-			}
 		})
 	}
 }
