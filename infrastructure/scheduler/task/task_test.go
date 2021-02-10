@@ -2,6 +2,7 @@ package task_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -12,20 +13,20 @@ import (
 type (
 	taskFields struct {
 		cmd      *mocks.Runner
-		schedule *mocks.Nexter
+		schedule *task.Schedule
 	}
 )
 
 func defaultTaskFields() *taskFields {
 	return &taskFields{
 		cmd:      new(mocks.Runner),
-		schedule: new(mocks.Nexter),
+		schedule: task.NewSchedule(time.Now().UTC(), time.Second*42),
 	}
 }
 
 func TestNew(t *testing.T) {
 	fields := defaultTaskFields()
-	gotTask := task.New(fields.cmd, fields.schedule)
-	assert.Equal(t, fields.cmd, gotTask.Cmd())
-	assert.Equal(t, fields.schedule, gotTask.Schedule())
+	gotTask := task.NewTask(fields.cmd, fields.schedule)
+	assert.Equal(t, fields.cmd, gotTask.Cmd)
+	assert.Equal(t, fields.schedule, gotTask.Schedule)
 }

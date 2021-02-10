@@ -8,8 +8,8 @@ import (
 
 type (
 	Cmd struct {
-		f    reflect.Value
-		args []reflect.Value
+		Func reflect.Value
+		Args []reflect.Value
 	}
 )
 
@@ -19,30 +19,40 @@ var (
 )
 
 func NewCmd(function interface{}, arguments ...interface{}) (*Cmd, error) {
-	args := make([]reflect.Value, len(arguments))
-	for i, arg := range arguments {
-		args[i] = reflect.ValueOf(arg)
-	}
-	cmd := &Cmd{f: reflect.ValueOf(function), args: args}
-	if err := cmd.validate(); err != nil {
+	f := makeFunc(function)
+	args := makeArgs(arguments)
+	if err := validate(f, args); err != nil {
 		return nil, err
 	}
+	cmd := &Cmd{Func: f, Args: args}
 	return cmd, nil
 }
 
 func (c *Cmd) Run() {
-	c.f.Call(c.args)
+	c.Func.Call(c.Args)
 }
 
-func (c *Cmd) validate() error {
-	funcType := reflect.TypeOf(c.f.Interface())
+func makeFunc(function interface{}) reflect.Value {
+	return reflect.ValueOf(function)
+}
+
+func makeArgs(arguments []interface{}) []reflect.Value {
+	args := make([]reflect.Value, len(arguments))
+	for i, arg := range arguments {
+		args[i] = reflect.ValueOf(arg)
+	}
+	return args
+}
+
+func validate(function reflect.Value, arguments []reflect.Value) error {
+	funcType := reflect.TypeOf(function.Interface())
 	numIn := funcType.NumIn()
-	numArgs := len(c.args)
+	numArgs := len(arguments)
 	if numIn != numArgs {
 		return fmt.Errorf("%w: expected %d arguments but got %d",
 			ErrArgumentsAmountMismatch, numIn, numArgs)
 	}
-	for i, arg := range c.args {
+	for i, arg := range arguments {
 		wantArgType := funcType.In(i).Kind()
 		gotArgType := arg.Kind()
 		if wantArgType != gotArgType {

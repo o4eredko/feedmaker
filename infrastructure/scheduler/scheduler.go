@@ -2,47 +2,33 @@ package scheduler
 
 import (
 	"context"
-	"time"
 
 	"github.com/robfig/cron/v3"
+
+	"go-feedmaker/infrastructure/scheduler/task"
 )
 
 type (
-	TaskScheduler interface {
-		StartStopper
-		AddTask(taskID TaskID, task Task) error
-		RemoveTask(taskID TaskID) error
+	Scheduler struct {
+		cron          Croner
+		scheduleSaver ScheduleSaver
+		mapper        TaskIDMapper
 	}
 
-	StartStopper interface {
+	Croner interface {
 		Start()
 		Stop() context.Context
+		Schedule(cron.Schedule, cron.Job) cron.EntryID
+		Remove(cron.EntryID)
 	}
 
 	TaskID string
 
-	Task interface {
-		Cmd() Runner
-		Schedule() Schedule
-	}
-
-	Runner interface {
-		Run()
-	}
-
-	Schedule interface {
-		Nexter
-		StartTimestamp() time.Time
-		FireInterval() time.Duration
-	}
-
-	Nexter interface {
-		Next(time.Time) time.Time
-	}
-
-	Scheduler struct {
-		cron   Croner
-		mapper TaskIDMapper
+	ScheduleSaver interface {
+		Store(TaskID, *task.Schedule) error
+		Load(TaskID) (*task.Schedule, error)
+		Delete(TaskID) error
+		// ListScheduledTasks() ([]TaskID, error)
 	}
 
 	TaskIDMapper interface {
@@ -50,18 +36,13 @@ type (
 		Load(TaskID) (cron.EntryID, error)
 		Delete(TaskID) error
 	}
-
-	Croner interface {
-		StartStopper
-		Schedule(cron.Schedule, cron.Job) cron.EntryID
-		Remove(cron.EntryID)
-	}
 )
 
-func New(cron Croner, mapper TaskIDMapper) *Scheduler {
+func New(cron Croner, scheduleSaver ScheduleSaver) *Scheduler {
 	return &Scheduler{
-		mapper: mapper,
-		cron:   cron,
+		cron:          cron,
+		scheduleSaver: scheduleSaver,
+		mapper:        NewMapper(),
 	}
 }
 
@@ -69,16 +50,20 @@ func (s *Scheduler) Start() {
 	s.cron.Start()
 }
 
-func (s *Scheduler) Stop() context.Context {
-	return s.cron.Stop()
+func (s *Scheduler) Stop() {
+	s.cron.Stop()
 }
 
-func (s *Scheduler) AddTask(taskID TaskID, task Task) error {
-	if _, err := s.mapper.Load(taskID); err != nil {
+func (s *Scheduler) ScheduleTask(taskID TaskID, task *task.Task) error {
+	if err := s.scheduleSaver.Store(taskID, task.Schedule); err != nil {
 		return err
 	}
-	entryID := s.cron.Schedule(task.Schedule(), task.Cmd())
-	return s.mapper.Store(taskID, entryID)
+	entryID := s.cron.Schedule(task.Schedule, task.Cmd)
+	if err := s.mapper.Store(taskID, entryID); err != nil {
+		s.cron.Remove(entryID)
+		return err
+	}
+	return nil
 }
 
 func (s *Scheduler) RemoveTask(taskID TaskID) error {
@@ -87,5 +72,8 @@ func (s *Scheduler) RemoveTask(taskID TaskID) error {
 		return err
 	}
 	s.cron.Remove(entryID)
-	return s.mapper.Delete(taskID)
+	if err := s.mapper.Delete(taskID); err != nil {
+		return err
+	}
+	return s.scheduleSaver.Delete(taskID)
 }

@@ -1,25 +1,19 @@
 package task
 
-import "go-feedmaker/infrastructure/scheduler"
-
 type (
 	Task struct {
-		cmd      scheduler.Runner
-		schedule scheduler.Nexter
+		Cmd      Runner
+		Schedule *Schedule
+	}
+
+	Runner interface {
+		Run()
 	}
 )
 
-func New(cmd scheduler.Runner, schedule scheduler.Nexter) *Task {
+func NewTask(cmd Runner, schedule *Schedule) *Task {
 	return &Task{
-		cmd:      cmd,
-		schedule: schedule,
+		Cmd:      cmd,
+		Schedule: schedule,
 	}
-}
-
-func (t *Task) Cmd() scheduler.Runner {
-	return t.cmd
-}
-
-func (t *Task) Schedule() scheduler.Nexter {
-	return t.schedule
 }

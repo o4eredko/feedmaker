@@ -66,9 +66,9 @@ func TestNewCmd(t *testing.T) {
 			assert.Equal(t, testCase.wantErr, errors.Unwrap(gotErr))
 			if gotErr == nil {
 				wantFunc := reflect.ValueOf(testCase.fields.f).Pointer()
-				gotFunc := reflect.ValueOf(cmd.CmdFunc()).Pointer()
+				gotFunc := reflect.ValueOf(cmd.Func.Interface()).Pointer()
 				assert.Equal(t, wantFunc, gotFunc)
-				assert.Equal(t, testCase.fields.args, cmd.Args())
+				assert.Equal(t, testCase.fields.args, getArgs(cmd.Args))
 			}
 		})
 	}
@@ -97,4 +97,12 @@ func TestCmd_Run(t *testing.T) {
 			testCase.fields.f.AssertExpectations(t)
 		})
 	}
+}
+
+func getArgs(arguments []reflect.Value) []interface{} {
+	args := make([]interface{}, len(arguments))
+	for i, arg := range arguments {
+		args[i] = arg.Interface()
+	}
+	return args
 }

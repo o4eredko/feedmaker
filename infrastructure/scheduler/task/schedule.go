@@ -3,32 +3,32 @@ package task
 import "time"
 
 type (
-	ScheduleWithSpecificStartTimestamp struct {
+	Schedule struct {
 		startTimestamp         time.Time
 		fireInterval           time.Duration
 		startTimestampExceeded bool
 	}
 )
 
-func NewScheduleWithSpecificStartTimestamp(
+func NewSchedule(
 	startTimestamp time.Time,
 	delayInterval time.Duration,
-) *ScheduleWithSpecificStartTimestamp {
-	return &ScheduleWithSpecificStartTimestamp{
+) *Schedule {
+	return &Schedule{
 		startTimestamp: startTimestamp,
 		fireInterval:   delayInterval,
 	}
 }
 
-func (s *ScheduleWithSpecificStartTimestamp) StartTimestamp() time.Time {
+func (s *Schedule) StartTimestamp() time.Time {
 	return s.startTimestamp
 }
 
-func (s *ScheduleWithSpecificStartTimestamp) FireInterval() time.Duration {
+func (s *Schedule) FireInterval() time.Duration {
 	return s.fireInterval
 }
 
-func (s *ScheduleWithSpecificStartTimestamp) Next(nowTimestamp time.Time) time.Time {
+func (s *Schedule) Next(nowTimestamp time.Time) time.Time {
 	if !s.startTimestampExceeded {
 		s.startTimestampExceeded = true
 		return s.getAlignedStartTimestamp(nowTimestamp)
@@ -37,7 +37,7 @@ func (s *ScheduleWithSpecificStartTimestamp) Next(nowTimestamp time.Time) time.T
 	return s.getNextTimestamp(nowTimestamp)
 }
 
-func (s *ScheduleWithSpecificStartTimestamp) getAlignedStartTimestamp(nowTimestamp time.Time) time.Time {
+func (s *Schedule) getAlignedStartTimestamp(nowTimestamp time.Time) time.Time {
 	startTimestamp := s.startTimestamp
 	if startTimestamp.After(nowTimestamp) {
 		return startTimestamp
@@ -48,7 +48,7 @@ func (s *ScheduleWithSpecificStartTimestamp) getAlignedStartTimestamp(nowTimesta
 	return startTimestamp.Add(elapsedTimeRoundedToInterval)
 }
 
-func (s *ScheduleWithSpecificStartTimestamp) getNextTimestamp(nowTimestamp time.Time) time.Time {
+func (s *Schedule) getNextTimestamp(nowTimestamp time.Time) time.Time {
 	return nowTimestamp.
 		Add(s.fireInterval).
 		Truncate(time.Second)
