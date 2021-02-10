@@ -1,102 +1,124 @@
 package rest
 
 import (
+	"context"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"net/http"
 
-	"github.com/gorilla/mux"
-	"github.com/rs/zerolog/log"
-
+	"go-feedmaker/infrastructure/scheduler"
+	"go-feedmaker/infrastructure/scheduler/task"
 	"go-feedmaker/interactor"
 )
 
 type (
 	handler struct {
-		feeds interactor.FeedInteractor
+		feeds     interactor.FeedInteractor
+		scheduler Scheduler
+	}
+
+	Scheduler interface {
+		ScheduleTask(taskID scheduler.TaskID, task *task.Task) error
+		RemoveTask(taskID scheduler.TaskID) error
+		ListSchedules() (map[scheduler.TaskID]*task.Schedule, error)
 	}
 )
 
-func NewHandler(feeds interactor.FeedInteractor) *handler {
+func NewHandler(feeds interactor.FeedInteractor, scheduler Scheduler) *handler {
 	return &handler{
-		feeds: feeds,
+		feeds:     feeds,
+		scheduler: scheduler,
 	}
 }
 
 func (h *handler) ListGenerations(w http.ResponseWriter, r *http.Request) {
 	generations, err := h.feeds.ListGenerations(r.Context())
 	if err != nil {
-		h.errorResponse(w, http.StatusInternalServerError, err)
+		errorResponse(w, http.StatusInternalServerError, err)
 		return
 	}
-	h.jsonResponse(w, http.StatusOK, generations)
+	jsonResponse(w, http.StatusOK, generations)
 }
 
 func (h *handler) ListGenerationTypes(w http.ResponseWriter, r *http.Request) {
 	generationTypes, err := h.feeds.ListGenerationTypes(r.Context())
 	if err != nil {
-		h.errorResponse(w, http.StatusInternalServerError, err)
+		errorResponse(w, http.StatusInternalServerError, err)
 		return
 	}
-	h.jsonResponse(w, http.StatusOK, generationTypes)
+	jsonResponse(w, http.StatusOK, generationTypes)
 }
 
 func (h *handler) GenerateFeed(w http.ResponseWriter, r *http.Request) {
-	generationType, err := h.extractGenerationType(r)
+	generationType, err := extractGenerationType(r)
 	if err != nil {
-		h.errorResponse(w, http.StatusBadRequest, err)
+		errorResponse(w, http.StatusBadRequest, err)
 		return
 	}
 	if err := h.feeds.GenerateFeed(r.Context(), generationType); err != nil {
-		h.errorResponse(w, http.StatusInternalServerError, err)
+		errorResponse(w, http.StatusInternalServerError, err)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusCreated)
 }
 
 func (h *handler) CancelGeneration(w http.ResponseWriter, r *http.Request) {
-	generationID, err := h.extractGenerationID(r)
+	generationID, err := extractGenerationID(r)
 	if err != nil {
-		h.errorResponse(w, http.StatusBadRequest, err)
+		errorResponse(w, http.StatusBadRequest, err)
 		return
 	}
 	if err := h.feeds.CancelGeneration(r.Context(), generationID); err != nil {
-		h.errorResponse(w, http.StatusInternalServerError, err)
+		errorResponse(w, http.StatusInternalServerError, err)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
 }
 
-func (h *handler) errorResponse(w http.ResponseWriter, code int, err error) {
-	body := map[string]string{"details": err.Error()}
-	h.jsonResponse(w, code, body)
-}
-
-func (h *handler) jsonResponse(w http.ResponseWriter, code int, body interface{}) {
-	w.WriteHeader(code)
-	encoder := json.NewEncoder(w)
-	if err := encoder.Encode(body); err != nil {
-		log.Error().
-			Err(err).
-			Interface("body", body).
-			Msg("send response body")
+func (h *handler) ScheduleGeneration(w http.ResponseWriter, r *http.Request) {
+	generationType, err := extractGenerationType(r)
+	if err != nil {
+		errorResponse(w, http.StatusBadRequest, err)
+		return
+	}
+	scheduleIn := new(scheduleTaskIn)
+	if err := json.NewDecoder(r.Body).Decode(scheduleIn); err != nil {
+		errorResponse(w, http.StatusBadRequest, err)
+		return
+	}
+	cmd, err := task.NewCmd(h.feeds.GenerateFeed, context.Background(), generationType)
+	if err != nil {
+		errorResponse(w, http.StatusInternalServerError, err)
+		return
+	}
+	schedule := task.NewSchedule(scheduleIn.StartTimestamp, scheduleIn.DelayInterval)
+	taskToSchedule := task.NewTask(cmd, schedule)
+	taskID := scheduler.TaskID(generationType)
+	if err := h.scheduler.ScheduleTask(taskID, taskToSchedule); err != nil {
+		errorResponse(w, http.StatusInternalServerError, err)
+		return
 	}
 }
 
-func (h *handler) extractGenerationType(r *http.Request) (string, error) {
-	return h.extractFromURL(r, "generation-type")
-}
-
-func (h *handler) extractGenerationID(r *http.Request) (string, error) {
-	return h.extractFromURL(r, "generation-id")
-}
-
-func (h *handler) extractFromURL(r *http.Request, key string) (string, error) {
-	vars := mux.Vars(r)
-	value, found := vars[key]
-	if !found {
-		return "", errors.New(fmt.Sprintf("%s wasn't passed", key))
+func (h *handler) ListSchedules(w http.ResponseWriter, r *http.Request) {
+	schedules, err := h.scheduler.ListSchedules()
+	if err != nil {
+		errorResponse(w, http.StatusInternalServerError, err)
+		return
 	}
-	return value, nil
+	schedulesOut := makeSchedulesOut(schedules)
+	jsonResponse(w, http.StatusCreated, schedulesOut)
+}
+
+func (h *handler) UnscheduleGeneration(w http.ResponseWriter, r *http.Request) {
+	generationType, err := extractGenerationType(r)
+	if err != nil {
+		errorResponse(w, http.StatusBadRequest, err)
+		return
+	}
+	taskID := scheduler.TaskID(generationType)
+	if err := h.scheduler.RemoveTask(taskID); err != nil {
+		errorResponse(w, http.StatusInternalServerError, err)
+		return
+	}
+	w.WriteHeader(http.StatusAccepted)
 }

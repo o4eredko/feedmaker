@@ -3,12 +3,14 @@ package rest_test
 import (
 	"errors"
 
-	"go-feedmaker/interactor/mocks"
+	restMocks "go-feedmaker/infrastructure/rest/mocks"
+	interactorMocks "go-feedmaker/interactor/mocks"
 )
 
 type (
 	handlerFields struct {
-		feeds *mocks.FeedInteractor
+		feeds     *interactorMocks.FeedInteractor
+		scheduler *restMocks.Scheduler
 	}
 )
 
@@ -19,6 +21,7 @@ var (
 
 func defaultHandlerFields() *handlerFields {
 	return &handlerFields{
-		feeds: new(mocks.FeedInteractor),
+		feeds:     new(interactorMocks.FeedInteractor),
+		scheduler: new(restMocks.Scheduler),
 	}
 }

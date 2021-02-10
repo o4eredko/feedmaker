@@ -23,7 +23,7 @@ func mustMarshal(v interface{}) []byte {
 
 func TestNewHandler(t *testing.T) {
 	fields := defaultHandlerFields()
-	h := rest.NewHandler(fields.feeds)
+	h := rest.NewHandler(fields.feeds, fields.scheduler)
 	assert.Equal(t, fields.feeds, h.Feeds())
 }
 
@@ -74,7 +74,7 @@ func Test_handler_ListGenerations(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.setupMocks(testCase.fields, testCase.args)
-			h := rest.NewHandler(testCase.fields.feeds)
+			h := rest.NewHandler(testCase.fields.feeds, testCase.fields.scheduler)
 			h.ListGenerations(testCase.args.w, testCase.args.r)
 			gotStatusCode := testCase.args.w.Code
 			gotBody := testCase.args.w.Body.Bytes()
@@ -132,7 +132,7 @@ func Test_handler_ListGenerationTypes(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.setupMocks(testCase.fields, testCase.args)
-			h := rest.NewHandler(testCase.fields.feeds)
+			h := rest.NewHandler(testCase.fields.feeds, testCase.fields.scheduler)
 			h.ListGenerationTypes(testCase.args.w, testCase.args.r)
 			gotStatusCode := testCase.args.w.Code
 			gotBody := testCase.args.w.Body.Bytes()
@@ -201,7 +201,7 @@ func Test_handler_GenerateFeed(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.setupMocks(testCase.fields, testCase.args)
-			h := rest.NewHandler(testCase.fields.feeds)
+			h := rest.NewHandler(testCase.fields.feeds, testCase.fields.scheduler)
 			h.GenerateFeed(testCase.args.w, testCase.args.r)
 			gotStatusCode := testCase.args.w.Code
 			assert.Equal(t, testCase.wantStatusCode, gotStatusCode)
@@ -268,7 +268,7 @@ func Test_handler_CancelGeneration(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.setupMocks(testCase.fields, testCase.args)
-			h := rest.NewHandler(testCase.fields.feeds)
+			h := rest.NewHandler(testCase.fields.feeds, testCase.fields.scheduler)
 			h.CancelGeneration(testCase.args.w, testCase.args.r)
 			gotStatusCode := testCase.args.w.Code
 			assert.Equal(t, testCase.wantStatusCode, gotStatusCode)
