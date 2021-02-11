@@ -3,11 +3,12 @@ package entity
 import "time"
 
 type Generation struct {
-	ID        string
-	Type      string
-	Progress  uint
-	StartTime time.Time
-	EndTime   time.Time
+	ID            string
+	Type          string
+	Progress      uint
+	FilesUploaded uint
+	StartTime     time.Time
+	EndTime       time.Time
 }
 
 func (g *Generation) SetProgress(progress uint) {

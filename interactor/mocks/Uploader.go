@@ -5,8 +5,6 @@ package mocks
 import (
 	context "context"
 
-	io "io"
-
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -15,13 +13,18 @@ type Uploader struct {
 	mock.Mock
 }
 
-// Upload provides a mock function with given fields: ctx, filepath, file
-func (_m *Uploader) Upload(ctx context.Context, filepath string, file io.Reader) error {
-	ret := _m.Called(ctx, filepath, file)
+// OnUpload provides a mock function with given fields: _a0
+func (_m *Uploader) OnUpload(_a0 func(uint)) {
+	_m.Called(_a0)
+}
+
+// UploadFiles provides a mock function with given fields: ctx
+func (_m *Uploader) UploadFiles(ctx context.Context) error {
+	ret := _m.Called(ctx)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, io.Reader) error); ok {
-		r0 = rf(ctx, filepath, file)
+	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = rf(ctx)
 	} else {
 		r0 = ret.Error(0)
 	}
