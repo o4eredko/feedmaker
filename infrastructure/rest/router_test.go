@@ -59,6 +59,27 @@ func TestNewRouter(t *testing.T) {
 				args.handler.On("CancelGeneration", mock.Anything, mock.Anything)
 			},
 		},
+		{
+			name: "POST /generations/foobar/schedules",
+			args: mustMakeArgs(http.MethodPost, "/generations/foobar/schedules"),
+			setupMocks: func(args *args) {
+				args.handler.On("ScheduleGeneration", mock.Anything, mock.Anything)
+			},
+		},
+		{
+			name: "GET /generations/schedules",
+			args: mustMakeArgs(http.MethodGet, "/generations/schedules"),
+			setupMocks: func(args *args) {
+				args.handler.On("ListSchedules", mock.Anything, mock.Anything)
+			},
+		},
+		{
+			name: "DELETE /generations/foobar/schedules",
+			args: mustMakeArgs(http.MethodDelete, "/generations/foobar/schedules"),
+			setupMocks: func(args *args) {
+				args.handler.On("UnscheduleGeneration", mock.Anything, mock.Anything)
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
