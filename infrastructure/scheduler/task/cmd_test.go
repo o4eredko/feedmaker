@@ -1,6 +1,7 @@
 package task_test
 
 import (
+	"context"
 	"errors"
 	"reflect"
 	"testing"
@@ -18,54 +19,67 @@ type (
 	}
 )
 
+var (
+	defaultContext = context.Background()
+	defaultArgs    = []interface{}{defaultContext, "foobar", 42}
+)
+
 func defaultCmdFields() *cmdFields {
 	mockedCmdFunc := new(mocks.CmdFunc)
 	return &cmdFields{
 		f:    mockedCmdFunc,
-		args: []interface{}{"foo", "bar", "baz"},
+		args: defaultArgs,
 	}
 }
 
 func TestNewCmd(t *testing.T) {
-	type fields struct {
-		f    interface{}
-		args []interface{}
+	getArgs := func(arguments []reflect.Value) []interface{} {
+		args := make([]interface{}, len(arguments))
+		for i, arg := range arguments {
+			args[i] = arg.Interface()
+		}
+		return args
 	}
 	testCases := []struct {
 		name    string
-		fields  fields
+		fields  *cmdFields
 		wantErr error
 	}{
 		{
-			name: "succeed",
-			fields: fields{
-				f:    func(string, int) {},
-				args: []interface{}{"foo", 42},
-			},
+			name:   "succeed",
+			fields: defaultCmdFields(),
 		},
 		{
 			name: "arguments amount mismatch",
-			fields: fields{
-				f:    func(string, int) {},
-				args: []interface{}{"foo", 42, 13},
+			fields: &cmdFields{
+				f:    new(mocks.CmdFunc),
+				args: []interface{}{"foo", 42},
 			},
 			wantErr: task.ErrArgumentsAmountMismatch,
 		},
 		{
 			name: "invalid argument type",
-			fields: fields{
-				f:    func(string, int) {},
-				args: []interface{}{"foo", "42"},
+			fields: &cmdFields{
+				f:    new(mocks.CmdFunc),
+				args: []interface{}{defaultContext, "foo", "42"},
+			},
+			wantErr: task.ErrInvalidArgumentType,
+		},
+		{
+			name: "argument is not assignable to expected interface",
+			fields: &cmdFields{
+				f:    new(mocks.CmdFunc),
+				args: []interface{}{"defaultContext", "foo", 42},
 			},
 			wantErr: task.ErrInvalidArgumentType,
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			cmd, gotErr := task.NewCmd(testCase.fields.f, testCase.fields.args...)
-			assert.Equal(t, testCase.wantErr, errors.Unwrap(gotErr))
+			cmd, gotErr := task.NewCmd(testCase.fields.f.Execute, testCase.fields.args...)
+			assert.True(t, errors.Is(gotErr, testCase.wantErr), "want: %v\ngot: %v", testCase.wantErr, gotErr)
 			if gotErr == nil {
-				wantFunc := reflect.ValueOf(testCase.fields.f).Pointer()
+				wantFunc := reflect.ValueOf(testCase.fields.f.Execute).Pointer()
 				gotFunc := reflect.ValueOf(cmd.Func.Interface()).Pointer()
 				assert.Equal(t, wantFunc, gotFunc)
 				assert.Equal(t, testCase.fields.args, getArgs(cmd.Args))
@@ -84,25 +98,17 @@ func TestCmd_Run(t *testing.T) {
 			name:   "succeed",
 			fields: defaultCmdFields(),
 			setupMocks: func(fields *cmdFields) {
-				fields.f.On("Execute", fields.args)
+				fields.f.On("Execute", fields.args...)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.setupMocks(testCase.fields)
-			cmd, _ := task.NewCmd(testCase.fields.f.Execute, testCase.fields.args)
+			cmd, err := task.NewCmd(testCase.fields.f.Execute, testCase.fields.args...)
+			assert.NoError(t, err)
 			cmd.Run()
-
 			testCase.fields.f.AssertExpectations(t)
 		})
 	}
-}
-
-func getArgs(arguments []reflect.Value) []interface{} {
-	args := make([]interface{}, len(arguments))
-	for i, arg := range arguments {
-		args[i] = arg.Interface()
-	}
-	return args
 }

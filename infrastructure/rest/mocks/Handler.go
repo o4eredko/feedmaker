@@ -32,3 +32,18 @@ func (_m *Handler) ListGenerationTypes(w http.ResponseWriter, r *http.Request) {
 func (_m *Handler) ListGenerations(w http.ResponseWriter, r *http.Request) {
 	_m.Called(w, r)
 }
+
+// ListSchedules provides a mock function with given fields: w, r
+func (_m *Handler) ListSchedules(w http.ResponseWriter, r *http.Request) {
+	_m.Called(w, r)
+}
+
+// ScheduleGeneration provides a mock function with given fields: w, r
+func (_m *Handler) ScheduleGeneration(w http.ResponseWriter, r *http.Request) {
+	_m.Called(w, r)
+}
+
+// UnscheduleGeneration provides a mock function with given fields: w, r
+func (_m *Handler) UnscheduleGeneration(w http.ResponseWriter, r *http.Request) {
+	_m.Called(w, r)
+}

@@ -3,6 +3,7 @@ package rest
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"go-feedmaker/infrastructure/scheduler"
@@ -82,7 +83,8 @@ func (h *handler) ScheduleGeneration(w http.ResponseWriter, r *http.Request) {
 	}
 	scheduleIn := new(scheduleTaskIn)
 	if err := json.NewDecoder(r.Body).Decode(scheduleIn); err != nil {
-		errorResponse(w, http.StatusBadRequest, err)
+		errorResponse(w, http.StatusBadRequest, fmt.Errorf("%w: %s",
+			ErrReadingRequestBody, err.Error()))
 		return
 	}
 	cmd, err := task.NewCmd(h.feeds.GenerateFeed, context.Background(), generationType)
@@ -97,6 +99,7 @@ func (h *handler) ScheduleGeneration(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, http.StatusInternalServerError, err)
 		return
 	}
+	w.WriteHeader(http.StatusCreated)
 }
 
 func (h *handler) ListSchedules(w http.ResponseWriter, r *http.Request) {
