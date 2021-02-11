@@ -16,6 +16,7 @@ import (
 	"go-feedmaker/adapter/repository"
 	"go-feedmaker/adapter/repository/mocks"
 	"go-feedmaker/entity"
+	helper "go-feedmaker/infrastructure/testing"
 )
 
 var (
@@ -420,6 +421,112 @@ func TestFeedRepo_CancelGeneration(t *testing.T) {
 			gotErr := feedRepo.CancelGeneration(tc.args.ctx, tc.args.id)
 
 			assert.Equal(t, tc.wantErr, gotErr)
+			fields.assertExpectations(t)
+		})
+	}
+}
+
+func TestFeedRepo_OnGenerationCanceled(t *testing.T) {
+	type args struct {
+		ctx          context.Context
+		generationID string
+		callback     func()
+	}
+	testCases := []struct {
+		name         string
+		args         *args
+		setupMocks   func(a *args, f *feedFields)
+		mustCallback bool
+		wantErr      error
+	}{
+		{
+			name: "succeed",
+			args: &args{
+				ctx:          context.Background(),
+				generationID: uuid.NewString(),
+			},
+			setupMocks: func(a *args, f *feedFields) {
+				channel := fmt.Sprintf("%s.canceled", a.generationID)
+				f.client.On("PubSub").Return(f.pubsub)
+				f.pubsub.On("Subscribe", channel).Return(nil)
+
+				f.pubsub.On("Receive").Return(redis.Message{Channel: channel, Data: []byte("1")})
+
+				f.pubsub.On("Unsubscribe", channel).Return(nil)
+				f.pubsub.On("Close").Return(nil)
+			},
+			mustCallback: true,
+		},
+		{
+			name: "Subscribe error",
+			args: &args{
+				ctx:          context.Background(),
+				generationID: uuid.NewString(),
+			},
+			setupMocks: func(a *args, f *feedFields) {
+				channel := fmt.Sprintf("%s.canceled", a.generationID)
+				f.client.On("PubSub").Return(f.pubsub)
+				f.pubsub.On("Subscribe", channel).Return(defaultErr)
+				f.pubsub.On("Close").Return(nil)
+			},
+			mustCallback: false,
+			wantErr:      defaultErr,
+		},
+		{
+			name: "Receive error",
+			args: &args{
+				ctx:          context.Background(),
+				generationID: uuid.NewString(),
+			},
+			setupMocks: func(a *args, f *feedFields) {
+				channel := fmt.Sprintf("%s.canceled", a.generationID)
+				f.client.On("PubSub").Return(f.pubsub)
+				f.pubsub.On("Subscribe", channel).Return(nil)
+
+				f.pubsub.On("Receive").Return(defaultErr)
+
+				f.pubsub.On("Unsubscribe", channel).Return(nil)
+				f.pubsub.On("Close").Return(nil)
+			},
+			mustCallback: false,
+			wantErr:      defaultErr,
+		},
+		{
+			name: "context error",
+			args: &args{
+				ctx:          helper.TimeoutCtx(t, context.Background(), time.Millisecond),
+				generationID: uuid.NewString(),
+			},
+			setupMocks: func(a *args, f *feedFields) {
+				channel := fmt.Sprintf("%s.canceled", a.generationID)
+				f.client.On("PubSub").Return(f.pubsub)
+				f.pubsub.On("Subscribe", channel).Return(nil)
+
+				f.pubsub.On("Receive").
+					Return(redis.Message{Channel: channel, Data: []byte("1")}).
+					After(time.Second)
+
+				f.pubsub.On("Unsubscribe", channel).Return(nil)
+				f.pubsub.On("Close").Return(nil)
+			},
+			mustCallback: false,
+			wantErr:      context.DeadlineExceeded,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var callbackCalled bool
+			fields := defaultFeedFields()
+			tc.setupMocks(tc.args, fields)
+			feedRepo := repository.NewFeedRepo(fields.client)
+			tc.args.callback = func() {
+				callbackCalled = true
+			}
+
+			gotErr := feedRepo.OnGenerationCanceled(tc.args.ctx, tc.args.generationID, tc.args.callback)
+
+			assert.Equal(t, tc.wantErr, gotErr)
+			assert.Equal(t, tc.mustCallback, callbackCalled, "Callback called mismatch")
 			fields.assertExpectations(t)
 		})
 	}
