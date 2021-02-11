@@ -13,6 +13,11 @@ import (
 	"go-feedmaker/infrastructure/scheduler/task"
 )
 
+var (
+	ErrValueNotFoundInURL = errors.New("not found in url")
+	ErrReadingRequestBody = errors.New("reading request body")
+)
+
 func errorResponse(w http.ResponseWriter, code int, err error) {
 	body := map[string]string{"details": err.Error()}
 	jsonResponse(w, code, body)
@@ -41,7 +46,7 @@ func extractFromURL(r *http.Request, key string) (string, error) {
 	vars := mux.Vars(r)
 	value, found := vars[key]
 	if !found {
-		return "", errors.New(fmt.Sprintf("%s wasn't passed", key))
+		return "", fmt.Errorf("looking for %v: %w", key, ErrValueNotFoundInURL)
 	}
 	return value, nil
 }
