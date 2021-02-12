@@ -3,7 +3,9 @@ module go-feedmaker
 go 1.15
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/denisenkom/go-mssqldb v0.9.0
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/gomodule/redigo v1.8.3
 	github.com/google/uuid v1.2.0

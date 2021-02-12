@@ -494,7 +494,7 @@ func TestFeedRepo_OnGenerationCanceled(t *testing.T) {
 		{
 			name: "context error",
 			args: &args{
-				ctx:          helper.TimeoutCtx(t, context.Background(), time.Millisecond),
+				ctx:          helper.TimeoutCtx(t, context.Background(), time.Nanosecond),
 				generationID: uuid.NewString(),
 			},
 			setupMocks: func(a *args, f *feedFields) {
@@ -504,7 +504,7 @@ func TestFeedRepo_OnGenerationCanceled(t *testing.T) {
 
 				f.pubsub.On("Receive").
 					Return(redis.Message{Channel: channel, Data: []byte("1")}).
-					After(time.Second)
+					After(time.Second).Maybe()
 
 				f.pubsub.On("Unsubscribe", channel).Return(nil)
 				f.pubsub.On("Close").Return(nil)
