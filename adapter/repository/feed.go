@@ -174,11 +174,6 @@ func (r *feedRepo) OnGenerationCanceled(ctx context.Context, generationID string
 					errChan <- nil
 					return
 				}
-			case redis.Subscription:
-				if v.Channel == channel && v.Kind == "unsubscribe" {
-					errChan <- nil
-					return
-				}
 			}
 		}
 	}()

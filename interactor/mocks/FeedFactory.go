@@ -45,3 +45,19 @@ func (_m *FeedFactory) CreateFileFormatter(inStream <-chan []string, outStream c
 
 	return r0
 }
+
+// CreateUploader provides a mock function with given fields: inStream
+func (_m *FeedFactory) CreateUploader(inStream <-chan io.ReadCloser) interactor.Uploader {
+	ret := _m.Called(inStream)
+
+	var r0 interactor.Uploader
+	if rf, ok := ret.Get(0).(func(<-chan io.ReadCloser) interactor.Uploader); ok {
+		r0 = rf(inStream)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(interactor.Uploader)
+		}
+	}
+
+	return r0
+}

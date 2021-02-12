@@ -3,7 +3,6 @@ package interactor_test
 import (
 	"context"
 	"errors"
-	"io"
 	"testing"
 	"time"
 
@@ -11,7 +10,6 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"go-feedmaker/entity"
-	helper "go-feedmaker/infrastructure/testing"
 	"go-feedmaker/interactor"
 	"go-feedmaker/interactor/mocks"
 )
@@ -38,16 +36,22 @@ var (
 )
 
 type fields struct {
-	uploader  *mocks.Uploader
-	feeds     *mocks.FeedRepo
-	presenter *mocks.Presenter
+	uploader      *mocks.Uploader
+	feeds         *mocks.FeedRepo
+	presenter     *mocks.Presenter
+	factory       *mocks.FeedFactory
+	fileFormatter *mocks.FileFormatter
+	dataFetcher   *mocks.DataFetcher
 }
 
 func defaultFields() *fields {
 	return &fields{
-		uploader:  new(mocks.Uploader),
-		feeds:     new(mocks.FeedRepo),
-		presenter: new(mocks.Presenter),
+		uploader:      new(mocks.Uploader),
+		feeds:         new(mocks.FeedRepo),
+		presenter:     new(mocks.Presenter),
+		factory:       new(mocks.FeedFactory),
+		fileFormatter: new(mocks.FileFormatter),
+		dataFetcher:   new(mocks.DataFetcher),
 	}
 }
 
@@ -59,6 +63,9 @@ func (f *fields) assertExpectations(t *testing.T) {
 	f.uploader.AssertExpectations(t)
 	f.feeds.AssertExpectations(t)
 	f.presenter.AssertExpectations(t)
+	f.factory.AssertExpectations(t)
+	f.fileFormatter.AssertExpectations(t)
+	f.dataFetcher.AssertExpectations(t)
 }
 
 func TestNewFeedInteractor(t *testing.T) {
@@ -70,13 +77,15 @@ func TestNewFeedInteractor(t *testing.T) {
 }
 
 func TestFeedInteractor_Generate(t *testing.T) {
-	t.SkipNow()
 	type args struct {
 		ctx            context.Context
 		generationType string
 	}
 	defaultArgs := func() *args {
-		return &args{ctx: context.Background(), generationType: "test"}
+		return &args{
+			ctx:            context.Background(),
+			generationType: "test",
+		}
 	}
 	testCases := []struct {
 		name       string
@@ -89,56 +98,33 @@ func TestFeedInteractor_Generate(t *testing.T) {
 			args: defaultArgs(),
 			setupMocks: func(a *args, f *fields) {
 				generationMatches := func(g *entity.Generation) bool {
-					return g.Progress == 0 && g.StartTime.Sub(time.Now()) < time.Second && g.Type == a.generationType
+					timeIsAlmostEqual := g.StartTime.Sub(time.Now()) < time.Second
+					return g.Progress == 0 && timeIsAlmostEqual && g.Type == a.generationType && len(g.ID) > 0
 				}
 
-				factory := new(mocks.FeedFactory)
-				dataFetcher := new(mocks.DataFetcher)
-				fileFormatter := new(mocks.FileFormatter)
-				var dataStream <-chan []string
-				fileStream := make(chan io.Reader, 2)
+				f.feeds.On("GetFactoryByGenerationType", a.generationType).
+					Return(f.factory, nil)
+				f.feeds.On("StoreGeneration", a.ctx, mock.MatchedBy(generationMatches)).
+					Return(&generation1, nil)
+				f.feeds.On("OnGenerationCanceled", mock.Anything, generation1.ID, mock.Anything).
+					Return(nil)
 
-				file1 := helper.OpenFile(t, "testdata/eggs0.csv")
-				file2 := helper.OpenFile(t, "testdata/eggs1.csv")
-				fileStream <- file1
-				fileStream <- file2
-				close(fileStream)
+				f.factory.On("CreateDataFetcher", mock.Anything).Return(f.dataFetcher)
+				f.factory.On("CreateFileFormatter", mock.Anything, mock.Anything).Return(f.fileFormatter)
+				f.factory.On("CreateUploader", mock.Anything).Return(f.uploader)
 
-				f.feeds.On("GetFactoryByGenerationType", a.generationType).Return(factory, nil)
-				f.feeds.On("StoreGeneration", a.ctx, mock.MatchedBy(generationMatches)).Return(&generation1, nil)
-				factory.On("CreateDataFetcher").Return(dataFetcher)
-				factory.On("CreateFileFormatter", dataStream).Return(fileFormatter)
-				dataFetcher.On("StreamData", a.ctx).Return(dataStream, nil)
-				fileFormatter.On("FormatFiles", a.ctx).Return((<-chan io.Reader)(fileStream), nil)
-				f.uploader.On("Upload", a.ctx, a.generationType, file1).Return(nil)
-				f.uploader.On("Upload", a.ctx, a.generationType, file2).Return(nil)
-
-				t.Cleanup(func() {
-					factory.AssertExpectations(t)
-					dataFetcher.AssertExpectations(t)
-					fileFormatter.AssertExpectations(t)
-				})
+				f.dataFetcher.
+					On("StreamData", mock.Anything).Return(nil)
+				f.fileFormatter.
+					On("FormatFiles", mock.Anything).Return(nil).
+					On("OnProgress", mock.Anything).Return(nil)
+				f.uploader.
+					On("UploadFiles", mock.Anything).Return(nil).
+					On("OnUpload", mock.Anything).Return(nil)
 			},
 		},
 		{
-			name: "feeds.StoreGeneration error",
-			args: defaultArgs(),
-			setupMocks: func(a *args, f *fields) {
-				generationMatches := func(g *entity.Generation) bool {
-					return g.Progress == 0 && g.StartTime.Sub(time.Now()) < time.Second && g.Type == a.generationType
-				}
-				factory := new(mocks.FeedFactory)
-				f.feeds.On("GetFactoryByGenerationType", a.generationType).Return(factory, nil)
-				f.feeds.On("StoreGeneration", a.ctx, mock.MatchedBy(generationMatches)).Return(nil, defaultErr)
-				f.presenter.On("PresentErr", mock.Anything).Return(errPassThrough)
-				t.Cleanup(func() {
-					factory.AssertExpectations(t)
-				})
-			},
-			wantErr: defaultErr,
-		},
-		{
-			name: "feeds.GetFactoryByGenerationType error",
+			name: "unknown generation type",
 			args: defaultArgs(),
 			setupMocks: func(a *args, f *fields) {
 				f.feeds.On("GetFactoryByGenerationType", a.generationType).Return(nil, defaultErr)
@@ -147,92 +133,119 @@ func TestFeedInteractor_Generate(t *testing.T) {
 			wantErr: defaultErr,
 		},
 		{
-			name: "feeds.StreamData error",
+			name: "store generation error",
 			args: defaultArgs(),
 			setupMocks: func(a *args, f *fields) {
 				generationMatches := func(g *entity.Generation) bool {
-					return g.Progress == 0 && g.StartTime.Sub(time.Now()) < time.Second && g.Type == a.generationType
+					timeIsAlmostEqual := g.StartTime.Sub(time.Now()) < time.Second
+					return g.Progress == 0 && timeIsAlmostEqual && g.Type == a.generationType && len(g.ID) > 0
 				}
-				factory := new(mocks.FeedFactory)
-				dataFetcher := new(mocks.DataFetcher)
-				fileFormatter := new(mocks.FileFormatter)
-
-				f.feeds.On("GetFactoryByGenerationType", a.generationType).Return(factory, nil)
-				f.feeds.On("StoreGeneration", a.ctx, mock.MatchedBy(generationMatches)).Return(&generation1, nil)
-				factory.On("CreateDataFetcher").Return(dataFetcher)
-				dataFetcher.On("StreamData", a.ctx).Return(nil, defaultErr)
+				f.feeds.On("GetFactoryByGenerationType", a.generationType).
+					Return(f.factory, nil)
+				f.feeds.On("StoreGeneration", a.ctx, mock.MatchedBy(generationMatches)).
+					Return(nil, defaultErr)
 				f.presenter.On("PresentErr", mock.Anything).Return(errPassThrough)
-
-				t.Cleanup(func() {
-					factory.AssertExpectations(t)
-					dataFetcher.AssertExpectations(t)
-					fileFormatter.AssertExpectations(t)
-				})
 			},
 			wantErr: defaultErr,
 		},
 		{
-			name: "feeds.FormatFiles error",
+			name: "stream data error",
 			args: defaultArgs(),
 			setupMocks: func(a *args, f *fields) {
 				generationMatches := func(g *entity.Generation) bool {
-					return g.Progress == 0 && g.StartTime.Sub(time.Now()) < time.Second && g.Type == a.generationType
+					timeIsAlmostEqual := g.StartTime.Sub(time.Now()) < time.Second
+					return g.Progress == 0 && timeIsAlmostEqual && g.Type == a.generationType && len(g.ID) > 0
 				}
-				factory := new(mocks.FeedFactory)
-				dataFetcher := new(mocks.DataFetcher)
-				fileFormatter := new(mocks.FileFormatter)
-				var dataStream <-chan []string
 
-				f.feeds.On("GetFactoryByGenerationType", a.generationType).Return(factory, nil)
-				f.feeds.On("StoreGeneration", a.ctx, mock.MatchedBy(generationMatches)).Return(&generation1, nil)
-				factory.On("CreateDataFetcher").Return(dataFetcher)
-				factory.On("CreateFileFormatter", dataStream).Return(fileFormatter)
-				dataFetcher.On("StreamData", a.ctx).Return(dataStream, nil)
-				fileFormatter.On("FormatFiles", a.ctx).Return(nil, defaultErr)
+				f.feeds.On("GetFactoryByGenerationType", a.generationType).
+					Return(f.factory, nil)
+				f.feeds.On("StoreGeneration", a.ctx, mock.MatchedBy(generationMatches)).
+					Return(&generation1, nil)
+				f.feeds.On("OnGenerationCanceled", mock.Anything, generation1.ID, mock.Anything).
+					Return(nil)
+
+				f.factory.On("CreateDataFetcher", mock.Anything).Return(f.dataFetcher)
+				f.factory.On("CreateFileFormatter", mock.Anything, mock.Anything).Return(f.fileFormatter)
+				f.factory.On("CreateUploader", mock.Anything).Return(f.uploader)
+
+				f.dataFetcher.
+					On("StreamData", mock.Anything).Return(defaultErr).After(time.Millisecond * 5)
+				f.fileFormatter.
+					On("FormatFiles", mock.Anything).Return(nil).
+					On("OnProgress", mock.Anything).Return(nil)
+				f.uploader.
+					On("UploadFiles", mock.Anything).Return(nil).
+					On("OnUpload", mock.Anything).Return(nil)
+
 				f.presenter.On("PresentErr", mock.Anything).Return(errPassThrough)
-
-				t.Cleanup(func() {
-					factory.AssertExpectations(t)
-					dataFetcher.AssertExpectations(t)
-					fileFormatter.AssertExpectations(t)
-				})
 			},
 			wantErr: defaultErr,
 		},
 		{
-			name: "uploader.Upload error ignored",
+			name: "format files error",
 			args: defaultArgs(),
 			setupMocks: func(a *args, f *fields) {
 				generationMatches := func(g *entity.Generation) bool {
-					return g.Progress == 0 && g.StartTime.Sub(time.Now()) < time.Second && g.Type == a.generationType
+					timeIsAlmostEqual := g.StartTime.Sub(time.Now()) < time.Second
+					return g.Progress == 0 && timeIsAlmostEqual && g.Type == a.generationType && len(g.ID) > 0
 				}
-				factory := new(mocks.FeedFactory)
-				dataFetcher := new(mocks.DataFetcher)
-				fileFormatter := new(mocks.FileFormatter)
-				var dataStream <-chan []string
-				fileStream := make(chan io.Reader, 2)
 
-				file1 := helper.OpenFile(t, "testdata/eggs0.csv")
-				file2 := helper.OpenFile(t, "testdata/eggs1.csv")
-				fileStream <- file1
-				fileStream <- file2
-				close(fileStream)
+				f.feeds.On("GetFactoryByGenerationType", a.generationType).
+					Return(f.factory, nil)
+				f.feeds.On("StoreGeneration", a.ctx, mock.MatchedBy(generationMatches)).
+					Return(&generation1, nil)
+				f.feeds.On("OnGenerationCanceled", mock.Anything, generation1.ID, mock.Anything).
+					Return(nil)
 
-				f.feeds.On("GetFactoryByGenerationType", a.generationType).Return(factory, nil)
-				f.feeds.On("StoreGeneration", a.ctx, mock.MatchedBy(generationMatches)).Return(&generation1, nil)
-				factory.On("CreateDataFetcher").Return(dataFetcher)
-				factory.On("CreateFileFormatter", dataStream).Return(fileFormatter)
-				dataFetcher.On("StreamData", a.ctx).Return(dataStream, nil)
-				fileFormatter.On("FormatFiles", a.ctx).Return((<-chan io.Reader)(fileStream), nil)
-				f.uploader.On("Upload", a.ctx, a.generationType, file1).Return(defaultErr)
-				f.uploader.On("Upload", a.ctx, a.generationType, file2).Return(nil)
+				f.factory.On("CreateDataFetcher", mock.Anything).Return(f.dataFetcher)
+				f.factory.On("CreateFileFormatter", mock.Anything, mock.Anything).Return(f.fileFormatter)
+				f.factory.On("CreateUploader", mock.Anything).Return(f.uploader)
 
-				t.Cleanup(func() {
-					factory.AssertExpectations(t)
-					dataFetcher.AssertExpectations(t)
-					fileFormatter.AssertExpectations(t)
-				})
+				f.dataFetcher.
+					On("StreamData", mock.Anything).Return(nil)
+				f.fileFormatter.
+					On("FormatFiles", mock.Anything).Return(defaultErr).After(time.Millisecond*5).
+					On("OnProgress", mock.Anything).Return(nil)
+				f.uploader.
+					On("UploadFiles", mock.Anything).Return(nil).
+					On("OnUpload", mock.Anything).Return(nil)
+
+				f.presenter.On("PresentErr", mock.Anything).Return(errPassThrough)
 			},
+			wantErr: defaultErr,
+		},
+		{
+			name: "upload files error",
+			args: defaultArgs(),
+			setupMocks: func(a *args, f *fields) {
+				generationMatches := func(g *entity.Generation) bool {
+					timeIsAlmostEqual := g.StartTime.Sub(time.Now()) < time.Second
+					return g.Progress == 0 && timeIsAlmostEqual && g.Type == a.generationType && len(g.ID) > 0
+				}
+
+				f.feeds.On("GetFactoryByGenerationType", a.generationType).
+					Return(f.factory, nil)
+				f.feeds.On("StoreGeneration", a.ctx, mock.MatchedBy(generationMatches)).
+					Return(&generation1, nil)
+				f.feeds.On("OnGenerationCanceled", mock.Anything, generation1.ID, mock.Anything).
+					Return(nil)
+
+				f.factory.On("CreateDataFetcher", mock.Anything).Return(f.dataFetcher)
+				f.factory.On("CreateFileFormatter", mock.Anything, mock.Anything).Return(f.fileFormatter)
+				f.factory.On("CreateUploader", mock.Anything).Return(f.uploader)
+
+				f.dataFetcher.
+					On("StreamData", mock.Anything).Return(nil)
+				f.fileFormatter.
+					On("FormatFiles", mock.Anything).Return(nil).
+					On("OnProgress", mock.Anything).Return(nil)
+				f.uploader.
+					On("UploadFiles", mock.Anything).Return(defaultErr).After(time.Millisecond*5).
+					On("OnUpload", mock.Anything).Return(nil)
+
+				f.presenter.On("PresentErr", mock.Anything).Return(errPassThrough)
+			},
+			wantErr: defaultErr,
 		},
 	}
 

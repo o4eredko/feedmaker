@@ -3,6 +3,7 @@ package interactor
 import (
 	"context"
 	"io"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -19,10 +20,6 @@ type (
 		CancelGeneration(ctx context.Context, id string) error
 	}
 
-	Uploader interface {
-		Upload(ctx context.Context, filepath string, file io.Reader) error
-	}
-
 	DataFetcher interface {
 		CountRecords(ctx context.Context) (uint, error)
 		StreamData(ctx context.Context) error
@@ -31,11 +28,17 @@ type (
 	FeedFactory interface {
 		CreateDataFetcher(outStream chan<- []string) DataFetcher
 		CreateFileFormatter(inStream <-chan []string, outStream chan<- io.ReadCloser) FileFormatter
+		CreateUploader(inStream <-chan io.ReadCloser) Uploader
 	}
 
 	FileFormatter interface {
 		FormatFiles(ctx context.Context) error
 		OnProgress(func(progress uint))
+	}
+
+	Uploader interface {
+		UploadFiles(ctx context.Context) error
+		OnUpload(func(uploadedNum uint))
 	}
 
 	FeedRepo interface {
@@ -90,20 +93,45 @@ func (i *feedInteractor) GenerateFeed(ctx context.Context, generationType string
 	}
 
 	ctx, cancelCtx := context.WithCancel(ctx)
+	defer cancelCtx()
 	go i.onGenerationCanceled(ctx, generation.ID, cancelCtx)
 	errStream := make(chan error)
 	recordStream := make(chan []string)
 	fileStream := make(chan io.ReadCloser)
-	defer cancelCtx()
-	defer close(errStream)
 
 	dataFetcher := factory.CreateDataFetcher(recordStream)
 	fileFormatter := factory.CreateFileFormatter(recordStream, fileStream)
+	uploader := factory.CreateUploader(fileStream)
 	fileFormatter.OnProgress(i.onProgress(generation))
+	uploader.OnUpload(i.onFileUploaded(generation))
 
-	go i.fetchData(ctx, dataFetcher, errStream)
-	go i.formatFiles(ctx, fileFormatter, errStream)
-	go i.uploadFiles(ctx, fileStream, generationType, errStream)
+	var wg sync.WaitGroup
+	wg.Add(3)
+	go func() {
+		defer wg.Done()
+		defer close(recordStream)
+		if err := dataFetcher.StreamData(ctx); err != nil {
+			errStream <- err
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		defer close(fileStream)
+		if err := fileFormatter.FormatFiles(ctx); err != nil {
+			errStream <- err
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		if err := uploader.UploadFiles(ctx); err != nil {
+			errStream <- err
+		}
+	}()
+	go func() {
+		wg.Wait()
+		close(errStream)
+	}()
+
 	for err := range errStream {
 		cancelCtx()
 		return i.presenter.PresentErr(err)
@@ -111,35 +139,22 @@ func (i *feedInteractor) GenerateFeed(ctx context.Context, generationType string
 	return nil
 }
 
-func (i *feedInteractor) uploadFiles(ctx context.Context, fileStream <-chan io.ReadCloser, generationType string, errStream chan<- error) {
-	for file := range fileStream {
-		if err := i.uploader.Upload(ctx, generationType, file); err != nil {
-			errStream <- err
-		}
-		if err := file.Close(); err != nil {
-			log.Error().Err(err).Msgf("Cannot close file during %s generation", generationType)
-		}
-	}
-}
-
-func (i *feedInteractor) fetchData(ctx context.Context, fetcher DataFetcher, errStream chan<- error) {
-	if err := fetcher.StreamData(ctx); err != nil {
-		errStream <- err
-	}
-}
-
-func (i *feedInteractor) formatFiles(ctx context.Context, formatter FileFormatter, errStream chan<- error) {
-	if err := formatter.FormatFiles(ctx); err != nil {
-		errStream <- err
-	}
-}
-
-func (i *feedInteractor) onProgress(generation *entity.Generation) func(progress uint) {
+func (i *feedInteractor) onProgress(generation *entity.Generation) func(uint) {
 	return func(progress uint) {
 		generation.SetProgress(progress)
 		if err := i.feeds.UpdateProgress(context.Background(), generation); err != nil {
 			log.Error().Err(err).
 				Msgf("Cannot update progress for %s %v", generation.ID, progress)
+		}
+	}
+}
+
+func (i *feedInteractor) onFileUploaded(generation *entity.Generation) func(uint) {
+	return func(uploadedNum uint) {
+		generation.FilesUploaded++
+		if err := i.feeds.UpdateProgress(context.Background(), generation); err != nil {
+			log.Error().Err(err).
+				Msgf("Cannot update state for %s", generation.ID)
 		}
 	}
 }
