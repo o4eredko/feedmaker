@@ -1,4 +1,4 @@
-package task_test
+package scheduler_test
 
 import (
 	"context"
@@ -8,8 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"go-feedmaker/infrastructure/scheduler"
 	"go-feedmaker/infrastructure/scheduler/mocks"
-	"go-feedmaker/infrastructure/scheduler/task"
 )
 
 type (
@@ -55,7 +55,7 @@ func TestNewCmd(t *testing.T) {
 				f:    new(mocks.CmdFunc),
 				args: []interface{}{"foo", 42},
 			},
-			wantErr: task.ErrArgumentsAmountMismatch,
+			wantErr: scheduler.ErrArgumentsAmountMismatch,
 		},
 		{
 			name: "invalid argument type",
@@ -63,7 +63,7 @@ func TestNewCmd(t *testing.T) {
 				f:    new(mocks.CmdFunc),
 				args: []interface{}{defaultContext, "foo", "42"},
 			},
-			wantErr: task.ErrInvalidArgumentType,
+			wantErr: scheduler.ErrInvalidArgumentType,
 		},
 		{
 			name: "argument is not assignable to expected interface",
@@ -71,12 +71,12 @@ func TestNewCmd(t *testing.T) {
 				f:    new(mocks.CmdFunc),
 				args: []interface{}{"defaultContext", "foo", 42},
 			},
-			wantErr: task.ErrInvalidArgumentType,
+			wantErr: scheduler.ErrInvalidArgumentType,
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			cmd, gotErr := task.NewCmd(testCase.fields.f.Execute, testCase.fields.args...)
+			cmd, gotErr := scheduler.NewCmd(testCase.fields.f.Execute, testCase.fields.args...)
 			assert.True(t, errors.Is(gotErr, testCase.wantErr), "want: %v\ngot: %v", testCase.wantErr, gotErr)
 			if gotErr == nil {
 				wantFunc := reflect.ValueOf(testCase.fields.f.Execute).Pointer()
@@ -105,7 +105,7 @@ func TestCmd_Run(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.setupMocks(testCase.fields)
-			cmd, err := task.NewCmd(testCase.fields.f.Execute, testCase.fields.args...)
+			cmd, err := scheduler.NewCmd(testCase.fields.f.Execute, testCase.fields.args...)
 			assert.NoError(t, err)
 			cmd.Run()
 			testCase.fields.f.AssertExpectations(t)

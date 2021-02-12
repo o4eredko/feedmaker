@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"go-feedmaker/infrastructure/scheduler"
-	"go-feedmaker/infrastructure/scheduler/task"
 	"go-feedmaker/interactor"
 )
 
@@ -18,9 +17,9 @@ type (
 	}
 
 	Scheduler interface {
-		ScheduleTask(taskID scheduler.TaskID, task *task.Task) error
+		ScheduleTask(taskID scheduler.TaskID, task *scheduler.Task) error
 		RemoveTask(taskID scheduler.TaskID) error
-		ListSchedules() (map[scheduler.TaskID]*task.Schedule, error)
+		ListSchedules() (map[scheduler.TaskID]*scheduler.Schedule, error)
 	}
 )
 
@@ -87,13 +86,13 @@ func (h *handler) ScheduleGeneration(w http.ResponseWriter, r *http.Request) {
 			ErrReadingRequestBody, err.Error()))
 		return
 	}
-	cmd, err := task.NewCmd(h.feeds.GenerateFeed, context.Background(), generationType)
+	cmd, err := scheduler.NewCmd(h.feeds.GenerateFeed, context.Background(), generationType)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, err)
 		return
 	}
-	schedule := task.NewSchedule(scheduleIn.StartTimestamp, scheduleIn.DelayInterval)
-	taskToSchedule := task.NewTask(cmd, schedule)
+	schedule := scheduler.NewSchedule(scheduleIn.StartTimestamp, scheduleIn.DelayInterval)
+	taskToSchedule := scheduler.NewTask(cmd, schedule)
 	taskID := scheduler.TaskID(generationType)
 	if err := h.scheduler.ScheduleTask(taskID, taskToSchedule); err != nil {
 		errorResponse(w, http.StatusInternalServerError, err)

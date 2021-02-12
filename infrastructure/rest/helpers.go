@@ -10,7 +10,6 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"go-feedmaker/infrastructure/scheduler"
-	"go-feedmaker/infrastructure/scheduler/task"
 )
 
 var (
@@ -51,7 +50,7 @@ func extractFromURL(r *http.Request, key string) (string, error) {
 	return value, nil
 }
 
-func makeSchedulesOut(schedules map[scheduler.TaskID]*task.Schedule) []*scheduleOut {
+func makeSchedulesOut(schedules map[scheduler.TaskID]*scheduler.Schedule) []*scheduleOut {
 	schedulesOut := make([]*scheduleOut, 0, len(schedules))
 	for taskID, schedule := range schedules {
 		scheduleOut := makeScheduleOut(taskID, schedule)
@@ -60,7 +59,7 @@ func makeSchedulesOut(schedules map[scheduler.TaskID]*task.Schedule) []*schedule
 	return schedulesOut
 }
 
-func makeScheduleOut(taskID scheduler.TaskID, schedule *task.Schedule) *scheduleOut {
+func makeScheduleOut(taskID scheduler.TaskID, schedule *scheduler.Schedule) *scheduleOut {
 	return &scheduleOut{
 		GenerationType: string(taskID),
 		StartTimestamp: schedule.StartTimestamp(),

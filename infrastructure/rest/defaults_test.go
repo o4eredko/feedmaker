@@ -7,7 +7,6 @@ import (
 	"go-feedmaker/infrastructure/rest"
 	restMocks "go-feedmaker/infrastructure/rest/mocks"
 	"go-feedmaker/infrastructure/scheduler"
-	"go-feedmaker/infrastructure/scheduler/task"
 	interactorMocks "go-feedmaker/interactor/mocks"
 )
 
@@ -25,7 +24,7 @@ var (
 		StartTimestamp: time.Now().UTC().Add(time.Hour * 13),
 		DelayInterval:  time.Minute * 42,
 	}
-	defaultTaskSchedules = map[scheduler.TaskID]*task.Schedule{
+	defaultTaskSchedules = map[scheduler.TaskID]*scheduler.Schedule{
 		"foobar": {}, "spam": {}, "ham": {}, "eggs": {}, "0xDEADBEEF": {},
 	}
 )

@@ -4,8 +4,6 @@ import (
 	"context"
 
 	"github.com/robfig/cron/v3"
-
-	"go-feedmaker/infrastructure/scheduler/task"
 )
 
 type (
@@ -25,8 +23,8 @@ type (
 	TaskID string
 
 	ScheduleSaver interface {
-		Store(TaskID, *task.Schedule) error
-		Load(TaskID) (*task.Schedule, error)
+		Store(TaskID, *Schedule) error
+		Load(TaskID) (*Schedule, error)
 		Delete(TaskID) error
 		ListScheduledTaskIDs() ([]TaskID, error)
 	}
@@ -54,7 +52,7 @@ func (s *Scheduler) Stop() {
 	s.cron.Stop()
 }
 
-func (s *Scheduler) ScheduleTask(taskID TaskID, task *task.Task) error {
+func (s *Scheduler) ScheduleTask(taskID TaskID, task *Task) error {
 	if err := s.scheduleSaver.Store(taskID, task.Schedule); err != nil {
 		return err
 	}
@@ -78,12 +76,12 @@ func (s *Scheduler) RemoveTask(taskID TaskID) error {
 	return s.scheduleSaver.Delete(taskID)
 }
 
-func (s *Scheduler) ListSchedules() (map[TaskID]*task.Schedule, error) {
+func (s *Scheduler) ListSchedules() (map[TaskID]*Schedule, error) {
 	ids, err := s.scheduleSaver.ListScheduledTaskIDs()
 	if err != nil {
 		return nil, err
 	}
-	schedules := make(map[TaskID]*task.Schedule)
+	schedules := make(map[TaskID]*Schedule)
 	for _, id := range ids {
 		schedule, err := s.scheduleSaver.Load(id)
 		if err != nil {

@@ -1,4 +1,4 @@
-package task_test
+package scheduler_test
 
 import (
 	"testing"
@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"go-feedmaker/infrastructure/scheduler/task"
+	"go-feedmaker/infrastructure/scheduler"
 )
 
 type (
@@ -35,7 +35,7 @@ func getNowTimestamp() time.Time {
 
 func TestNewScheduleWithSpecificStartTimestamp(t *testing.T) {
 	fields := defaultScheduleWithSpecificStartTimestampFields()
-	s := task.NewSchedule(fields.startTimestamp, fields.delayInterval)
+	s := scheduler.NewSchedule(fields.startTimestamp, fields.delayInterval)
 	assert.Equal(t, fields.startTimestamp, s.StartTimestamp())
 	assert.Equal(t, fields.delayInterval, s.FireInterval())
 }
@@ -59,7 +59,7 @@ func TestScheduleWithSpecificStartTimestamp_Next(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			s := task.NewSchedule(
+			s := scheduler.NewSchedule(
 				testCase.fields.startTimestamp,
 				testCase.fields.delayInterval,
 			)

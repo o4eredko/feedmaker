@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"go-feedmaker/infrastructure/scheduler"
-	"go-feedmaker/infrastructure/scheduler/task"
 	"go-feedmaker/interactor"
 )
 
@@ -20,6 +19,6 @@ func (s *APIServer) Server() *http.Server {
 	return s.server
 }
 
-func MakeSchedulesOut(schedules map[scheduler.TaskID]*task.Schedule) []*scheduleOut {
+func MakeSchedulesOut(schedules map[scheduler.TaskID]*scheduler.Schedule) []*scheduleOut {
 	return makeSchedulesOut(schedules)
 }

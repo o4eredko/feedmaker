@@ -8,7 +8,6 @@ import (
 
 	"go-feedmaker/infrastructure/scheduler"
 	"go-feedmaker/infrastructure/scheduler/mocks"
-	"go-feedmaker/infrastructure/scheduler/task"
 )
 
 type (
@@ -89,14 +88,14 @@ func TestScheduler_Stop(t *testing.T) {
 func TestScheduler_ScheduleTask(t *testing.T) {
 	type args struct {
 		taskID scheduler.TaskID
-		task   *task.Task
+		task   *scheduler.Task
 	}
 	defaultArgs := func() *args {
 		cmd := new(mocks.Runner)
 		schedule := defaultSchedule
 		return &args{
 			taskID: defaultTaskID,
-			task:   task.NewTask(cmd, schedule),
+			task:   scheduler.NewTask(cmd, schedule),
 		}
 	}
 	testCases := []struct {
@@ -271,7 +270,7 @@ func TestScheduler_ListSchedules(t *testing.T) {
 		name          string
 		fields        *schedulerFields
 		setupMocks    func(*schedulerFields)
-		wantSchedules map[scheduler.TaskID]*task.Schedule
+		wantSchedules map[scheduler.TaskID]*scheduler.Schedule
 		wantErr       error
 	}{
 		{
