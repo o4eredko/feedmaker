@@ -107,8 +107,7 @@ func (h *handler) ListSchedules(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, http.StatusInternalServerError, err)
 		return
 	}
-	schedulesOut := makeSchedulesOut(schedules)
-	jsonResponse(w, http.StatusCreated, schedulesOut)
+	jsonResponse(w, http.StatusCreated, schedules)
 }
 
 func (h *handler) UnscheduleGeneration(w http.ResponseWriter, r *http.Request) {
