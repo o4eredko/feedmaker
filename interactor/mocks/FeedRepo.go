@@ -178,8 +178,8 @@ func (_m *FeedRepo) StoreGeneration(ctx context.Context, generation *entity.Gene
 	return r0, r1
 }
 
-// UpdateProgress provides a mock function with given fields: ctx, generation
-func (_m *FeedRepo) UpdateProgress(ctx context.Context, generation *entity.Generation) error {
+// UpdateGenerationState provides a mock function with given fields: ctx, generation
+func (_m *FeedRepo) UpdateGenerationState(ctx context.Context, generation *entity.Generation) error {
 	ret := _m.Called(ctx, generation)
 
 	var r0 error

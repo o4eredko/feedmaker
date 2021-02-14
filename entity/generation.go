@@ -6,6 +6,7 @@ type Generation struct {
 	ID            string
 	Type          string
 	Progress      uint
+	DataFetched   bool
 	FilesUploaded uint
 	StartTime     time.Time
 	EndTime       time.Time

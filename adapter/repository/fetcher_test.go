@@ -2,7 +2,6 @@ package repository_test
 
 import (
 	"context"
-	"database/sql"
 	"database/sql/driver"
 	"regexp"
 	"sync"
@@ -21,104 +20,104 @@ type sqlFetcherFields struct {
 	SelectQuery string
 }
 
-func TestSqlDataFetcher_CountRecords(t *testing.T) {
-	type args struct {
-		ctx context.Context
-	}
-	testCases := []struct {
-		name       string
-		args       *args
-		fields     *sqlFetcherFields
-		setupMocks func(a *args, f *sqlFetcherFields, s sqlmock.Sqlmock)
-		want       uint
-		wantErr    error
-	}{
-		{
-			name:   "succeed",
-			args:   &args{ctx: context.Background()},
-			fields: &sqlFetcherFields{CountQuery: "SELECT 42;"},
-			setupMocks: func(a *args, f *sqlFetcherFields, sql sqlmock.Sqlmock) {
-				rows := sqlmock.NewRows([]string{"count"}).AddRow(100)
-				sql.ExpectQuery(f.CountQuery).WillReturnRows(rows).RowsWillBeClosed()
-			},
-			want: 100,
-		},
-		{
-			name: "context error",
-			args: &args{
-				ctx: helper.TimeoutCtx(t, context.Background(), time.Nanosecond),
-			},
-			fields: &sqlFetcherFields{CountQuery: "SELECT 42;"},
-			setupMocks: func(a *args, f *sqlFetcherFields, sql sqlmock.Sqlmock) {
-				rows := sqlmock.NewRows([]string{"count"}).AddRow(100)
-				sql.ExpectQuery(f.CountQuery).WillReturnRows(rows).WillDelayFor(time.Second)
-			},
-			wantErr: sqlmock.ErrCancelled,
-		},
-		{
-			name:   "Query error",
-			args:   &args{ctx: context.Background()},
-			fields: &sqlFetcherFields{CountQuery: "SELECT 42;"},
-			setupMocks: func(a *args, f *sqlFetcherFields, sql sqlmock.Sqlmock) {
-				sql.ExpectQuery(f.CountQuery).WillReturnError(defaultErr)
-			},
-			wantErr: defaultErr,
-		},
-		{
-			name:   "row error",
-			args:   &args{ctx: context.Background()},
-			fields: &sqlFetcherFields{CountQuery: "SELECT 42;"},
-			setupMocks: func(a *args, f *sqlFetcherFields, sql sqlmock.Sqlmock) {
-				rows := sqlmock.NewRows([]string{"count"}).AddRow(100)
-				rows.RowError(0, defaultErr)
-				sql.ExpectQuery(f.CountQuery).WillReturnRows(rows).RowsWillBeClosed()
-			},
-			wantErr: defaultErr,
-		},
-		{
-			name:   "rows close error",
-			args:   &args{ctx: context.Background()},
-			fields: &sqlFetcherFields{CountQuery: "SELECT 42;"},
-			setupMocks: func(a *args, f *sqlFetcherFields, sql sqlmock.Sqlmock) {
-				rows := sqlmock.NewRows([]string{"count"}).AddRow(100)
-				rows.CloseError(defaultErr)
-				sql.ExpectQuery(f.CountQuery).WillReturnRows(rows).RowsWillBeClosed()
-			},
-			wantErr: defaultErr,
-		},
-		{
-			name:   "no rows returned",
-			args:   &args{ctx: context.Background()},
-			fields: &sqlFetcherFields{CountQuery: "SELECT 42;"},
-			setupMocks: func(a *args, f *sqlFetcherFields, sql sqlmock.Sqlmock) {
-				rows := sqlmock.NewRows([]string{"count"})
-				sql.ExpectQuery(f.CountQuery).WillReturnRows(rows).RowsWillBeClosed()
-			},
-			wantErr: sql.ErrNoRows,
-		},
-	}
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			db, mock, err := sqlmock.New()
-			assert.NoError(t, err)
-			conn, err := db.Conn(context.Background())
-			assert.NoError(t, err)
-			defer assert.NoError(t, db.Close())
-
-			tc.setupMocks(tc.args, tc.fields, mock)
-			sqlFetcher := repository.SqlDataFetcher{
-				Db:         conn,
-				CountQuery: tc.fields.CountQuery,
-			}
-
-			got, gotErr := sqlFetcher.CountRecords(tc.args.ctx)
-
-			assert.Equal(t, tc.want, got)
-			assert.Equal(t, tc.wantErr, gotErr)
-			assert.NoError(t, mock.ExpectationsWereMet())
-		})
-	}
-}
+// func TestSqlDataFetcher_CountRecords(t *testing.T) {
+// 	type args struct {
+// 		ctx context.Context
+// 	}
+// 	testCases := []struct {
+// 		name       string
+// 		args       *args
+// 		fields     *sqlFetcherFields
+// 		setupMocks func(a *args, f *sqlFetcherFields, s sqlmock.Sqlmock)
+// 		want       uint
+// 		wantErr    error
+// 	}{
+// 		{
+// 			name:   "succeed",
+// 			args:   &args{ctx: context.Background()},
+// 			fields: &sqlFetcherFields{CountQuery: "SELECT 42;"},
+// 			setupMocks: func(a *args, f *sqlFetcherFields, sql sqlmock.Sqlmock) {
+// 				rows := sqlmock.NewRows([]string{"count"}).AddRow(100)
+// 				sql.ExpectQuery(f.CountQuery).WillReturnRows(rows).RowsWillBeClosed()
+// 			},
+// 			want: 100,
+// 		},
+// 		{
+// 			name: "context error",
+// 			args: &args{
+// 				ctx: helper.TimeoutCtx(t, context.Background(), time.Nanosecond),
+// 			},
+// 			fields: &sqlFetcherFields{CountQuery: "SELECT 42;"},
+// 			setupMocks: func(a *args, f *sqlFetcherFields, sql sqlmock.Sqlmock) {
+// 				rows := sqlmock.NewRows([]string{"count"}).AddRow(100)
+// 				sql.ExpectQuery(f.CountQuery).WillReturnRows(rows).WillDelayFor(time.Second)
+// 			},
+// 			wantErr: sqlmock.ErrCancelled,
+// 		},
+// 		{
+// 			name:   "Query error",
+// 			args:   &args{ctx: context.Background()},
+// 			fields: &sqlFetcherFields{CountQuery: "SELECT 42;"},
+// 			setupMocks: func(a *args, f *sqlFetcherFields, sql sqlmock.Sqlmock) {
+// 				sql.ExpectQuery(f.CountQuery).WillReturnError(defaultErr)
+// 			},
+// 			wantErr: defaultErr,
+// 		},
+// 		{
+// 			name:   "row error",
+// 			args:   &args{ctx: context.Background()},
+// 			fields: &sqlFetcherFields{CountQuery: "SELECT 42;"},
+// 			setupMocks: func(a *args, f *sqlFetcherFields, sql sqlmock.Sqlmock) {
+// 				rows := sqlmock.NewRows([]string{"count"}).AddRow(100)
+// 				rows.RowError(0, defaultErr)
+// 				sql.ExpectQuery(f.CountQuery).WillReturnRows(rows).RowsWillBeClosed()
+// 			},
+// 			wantErr: defaultErr,
+// 		},
+// 		{
+// 			name:   "rows close error",
+// 			args:   &args{ctx: context.Background()},
+// 			fields: &sqlFetcherFields{CountQuery: "SELECT 42;"},
+// 			setupMocks: func(a *args, f *sqlFetcherFields, sql sqlmock.Sqlmock) {
+// 				rows := sqlmock.NewRows([]string{"count"}).AddRow(100)
+// 				rows.CloseError(defaultErr)
+// 				sql.ExpectQuery(f.CountQuery).WillReturnRows(rows).RowsWillBeClosed()
+// 			},
+// 			wantErr: defaultErr,
+// 		},
+// 		{
+// 			name:   "no rows returned",
+// 			args:   &args{ctx: context.Background()},
+// 			fields: &sqlFetcherFields{CountQuery: "SELECT 42;"},
+// 			setupMocks: func(a *args, f *sqlFetcherFields, sql sqlmock.Sqlmock) {
+// 				rows := sqlmock.NewRows([]string{"count"})
+// 				sql.ExpectQuery(f.CountQuery).WillReturnRows(rows).RowsWillBeClosed()
+// 			},
+// 			wantErr: sql.ErrNoRows,
+// 		},
+// 	}
+// 	for _, tc := range testCases {
+// 		t.Run(tc.name, func(t *testing.T) {
+// 			db, mock, err := sqlmock.New()
+// 			assert.NoError(t, err)
+// 			conn, err := db.Conn(context.Background())
+// 			assert.NoError(t, err)
+// 			defer assert.NoError(t, db.Close())
+//
+// 			tc.setupMocks(tc.args, tc.fields, mock)
+// 			sqlFetcher := repository.SqlDataFetcher{
+// 				Db:         conn,
+// 				CountQuery: tc.fields.CountQuery,
+// 			}
+//
+// 			got, gotErr := sqlFetcher.CountRecords(tc.args.ctx)
+//
+// 			assert.Equal(t, tc.want, got)
+// 			assert.Equal(t, tc.wantErr, gotErr)
+// 			assert.NoError(t, mock.ExpectationsWereMet())
+// 		})
+// 	}
+// }
 
 func TestSqlDataFetcher_StreamData(t *testing.T) {
 	type args struct {
@@ -133,12 +132,18 @@ func TestSqlDataFetcher_StreamData(t *testing.T) {
 		wantErr      error
 	}{
 		{
-			name:         "succeed",
-			args:         &args{ctx: context.Background()},
-			fields:       &sqlFetcherFields{SelectQuery: "SELECT Count(*) FROM Marketing.dbo.records;"},
+			name: "succeed",
+			args: &args{ctx: context.Background()},
+			fields: &sqlFetcherFields{
+				SelectQuery: "SELECT * FROM Marketing.dbo.records;",
+				CountQuery:  "SELECT Count(*) FROM Marketing.dbo.records;",
+			},
 			inCsvRecords: helper.ReadCsvFromFile(t, "testdata/records.csv"),
 			setupMocks: func(args *args, f *sqlFetcherFields, sql sqlmock.Sqlmock, csvRecords [][]string) {
-				rows := sqlmock.NewRows([]string{"col1", "col2", "col3", "col4"})
+				rows := sqlmock.NewRows([]string{"count"}).AddRow(100)
+				sql.ExpectQuery(regexp.QuoteMeta(f.CountQuery)).WillReturnRows(rows).RowsWillBeClosed()
+
+				rows = sqlmock.NewRows([]string{"col1", "col2", "col3", "col4"})
 				for _, record := range csvRecords {
 					rows.AddRow(csvRecordToSqlValues(record)...)
 				}
@@ -146,36 +151,60 @@ func TestSqlDataFetcher_StreamData(t *testing.T) {
 			},
 		},
 		{
-			name:         "Query error",
-			args:         &args{ctx: context.Background()},
-			fields:       &sqlFetcherFields{SelectQuery: "SELECT Count(*) FROM Marketing.dbo.records;"},
+			name: "Count Query error",
+			args: &args{ctx: context.Background()},
+			fields: &sqlFetcherFields{
+				SelectQuery: regexp.QuoteMeta("SELECT * FROM Marketing.dbo.records;"),
+				CountQuery:  regexp.QuoteMeta("SELECT Count(*) FROM Marketing.dbo.records;"),
+			},
 			inCsvRecords: helper.ReadCsvFromFile(t, "testdata/records.csv"),
 			setupMocks: func(args *args, f *sqlFetcherFields, sql sqlmock.Sqlmock, csvRecords [][]string) {
+				sql.ExpectQuery(regexp.QuoteMeta(f.CountQuery)).WillReturnError(defaultErr)
+			},
+			wantErr: defaultErr,
+		},
+		{
+			name: "Select Query error",
+			args: &args{ctx: context.Background()},
+			fields: &sqlFetcherFields{
+				SelectQuery: regexp.QuoteMeta("SELECT * FROM Marketing.dbo.records;"),
+				CountQuery:  regexp.QuoteMeta("SELECT Count(*) FROM Marketing.dbo.records;"),
+			},
+			inCsvRecords: helper.ReadCsvFromFile(t, "testdata/records.csv"),
+			setupMocks: func(args *args, f *sqlFetcherFields, sql sqlmock.Sqlmock, csvRecords [][]string) {
+				rows := sqlmock.NewRows([]string{"count"}).AddRow(100)
+				sql.ExpectQuery(regexp.QuoteMeta(f.CountQuery)).WillReturnRows(rows).RowsWillBeClosed()
 				sql.ExpectQuery(regexp.QuoteMeta(f.SelectQuery)).WillReturnError(defaultErr)
 			},
 			wantErr: defaultErr,
 		},
 		{
-			name:         "context error",
-			args:         &args{ctx: helper.TimeoutCtx(t, context.Background(), time.Nanosecond)},
-			fields:       &sqlFetcherFields{SelectQuery: "SELECT Count(*) FROM Marketing.dbo.records;"},
+			name: "context error",
+			args: &args{ctx: helper.TimeoutCtx(t, context.Background(), time.Nanosecond)},
+			fields: &sqlFetcherFields{
+				SelectQuery: "SELECT * FROM Marketing.dbo.records;",
+				CountQuery:  "SELECT Count(*) FROM Marketing.dbo.records;",
+			},
 			inCsvRecords: helper.ReadCsvFromFile(t, "testdata/records.csv"),
 			setupMocks: func(args *args, f *sqlFetcherFields, sql sqlmock.Sqlmock, csvRecords [][]string) {
-				rows := sqlmock.NewRows([]string{"col1", "col2", "col3", "col4"})
-				for _, record := range csvRecords {
-					rows.AddRow(csvRecordToSqlValues(record)...)
-				}
-				sql.ExpectQuery(regexp.QuoteMeta(f.SelectQuery)).WillReturnRows(rows).WillDelayFor(time.Second)
+				rows := sqlmock.NewRows([]string{"count"}).AddRow(100)
+				sql.ExpectQuery(regexp.QuoteMeta(f.CountQuery)).WillReturnRows(rows).WillDelayFor(time.Second)
 			},
 			wantErr: sqlmock.ErrCancelled,
 		},
 		{
-			name:         "row error",
-			args:         &args{ctx: context.Background()},
-			fields:       &sqlFetcherFields{SelectQuery: "SELECT Count(*) FROM Marketing.dbo.records;"},
+			name: "row error",
+			args: &args{ctx: context.Background()},
+			fields: &sqlFetcherFields{
+				SelectQuery: "SELECT * FROM Marketing.dbo.records;",
+				CountQuery:  "SELECT Count(*) FROM Marketing.dbo.records;",
+			},
 			inCsvRecords: helper.ReadCsvFromFile(t, "testdata/records.csv"),
 			setupMocks: func(args *args, f *sqlFetcherFields, sql sqlmock.Sqlmock, csvRecords [][]string) {
-				rows := sqlmock.NewRows([]string{"col1", "col2", "col3", "col4"})
+				rows := sqlmock.NewRows([]string{"count"}).AddRow(100)
+				sql.ExpectQuery(regexp.QuoteMeta(f.CountQuery)).WillReturnRows(rows).RowsWillBeClosed()
+
+				rows = sqlmock.NewRows([]string{"col1", "col2", "col3", "col4"})
 				for _, record := range csvRecords {
 					rows.AddRow(csvRecordToSqlValues(record)...)
 				}
@@ -200,6 +229,7 @@ func TestSqlDataFetcher_StreamData(t *testing.T) {
 				Db:          conn,
 				OutStream:   recordStream,
 				SelectQuery: tc.fields.SelectQuery,
+				CountQuery:  tc.fields.CountQuery,
 			}
 
 			var wg sync.WaitGroup

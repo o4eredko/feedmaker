@@ -64,6 +64,8 @@ func (r *feedRepo) StoreGeneration(ctx context.Context, generation *entity.Gener
 		Add(generation.ID).
 		Add("type", generation.Type).
 		Add("progress", generation.Progress).
+		Add("data_fetched", generation.DataFetched).
+		Add("files_uploaded", generation.FilesUploaded).
 		Add("start_time", generation.StartTime.Unix())
 	if !generation.EndTime.IsZero() {
 		hashArgs = hashArgs.Add("end_time", generation.EndTime.Unix())
@@ -118,10 +120,13 @@ func makeGenerationFromRedisValues(v map[string]string) (*entity.Generation, err
 	return generation, nil
 }
 
-func (r *feedRepo) UpdateProgress(ctx context.Context, generation *entity.Generation) error {
+func (r *feedRepo) UpdateGenerationState(ctx context.Context, generation *entity.Generation) error {
 	conn := r.client.Connection()
 	defer conn.Close()
-	hashArgs := new(redis.Args).Add(generation.ID).Add("progress", generation.Progress)
+	hashArgs := new(redis.Args).Add(generation.ID).
+		Add("progress", generation.Progress).
+		Add("data_fetched", generation.DataFetched).
+		Add("files_uploaded", generation.FilesUploaded)
 	if !generation.EndTime.IsZero() {
 		hashArgs = hashArgs.Add("end_time", generation.EndTime.Unix())
 	}
@@ -129,7 +134,7 @@ func (r *feedRepo) UpdateProgress(ctx context.Context, generation *entity.Genera
 	if err != nil {
 		return err
 	}
-	_, err = conn.Do("PUBLISH", generation.ID, generation.Progress)
+	_, err = conn.Do("PUBLISH", generation.ID, "1")
 	if err != nil {
 		return err
 	}

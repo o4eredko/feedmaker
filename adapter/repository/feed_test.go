@@ -75,6 +75,8 @@ func TestFeedRepo_StoreGeneration(t *testing.T) {
 					Add("HMSET", a.generation.ID).
 					Add(mock.Anything, a.generation.Type).
 					Add(mock.Anything, a.generation.Progress).
+					Add(mock.Anything, a.generation.DataFetched).
+					Add(mock.Anything, a.generation.FilesUploaded).
 					Add(mock.Anything, a.generation.StartTime.Unix()).
 					Add(mock.Anything, a.generation.EndTime.Unix())
 				f.conn.On("Send", args...).Return(nil)
@@ -100,6 +102,8 @@ func TestFeedRepo_StoreGeneration(t *testing.T) {
 					Add("HMSET", a.generation.ID).
 					Add(mock.Anything, a.generation.Type).
 					Add(mock.Anything, a.generation.Progress).
+					Add(mock.Anything, a.generation.DataFetched).
+					Add(mock.Anything, a.generation.FilesUploaded).
 					Add(mock.Anything, a.generation.StartTime.Unix())
 				f.conn.On("Send", args...).Return(nil)
 				f.conn.On("Do", "EXEC").Return("", defaultErr)
@@ -250,7 +254,7 @@ func TestFeedRepo_ListGenerations(t *testing.T) {
 	}
 }
 
-func TestFeedRepo_UpdateProgress(t *testing.T) {
+func TestFeedRepo_UpdateGenerationState(t *testing.T) {
 	type args struct {
 		ctx        context.Context
 		generation *entity.Generation
@@ -279,10 +283,12 @@ func TestFeedRepo_UpdateProgress(t *testing.T) {
 				args := new(redis.Args).
 					Add("HSET", a.generation.ID).
 					Add(mock.Anything, a.generation.Progress).
+					Add(mock.Anything, a.generation.DataFetched).
+					Add(mock.Anything, a.generation.FilesUploaded).
 					Add(mock.Anything, a.generation.EndTime.Unix())
 				f.conn.On("Do", args...).Return("", nil)
 
-				args = new(redis.Args).Add("PUBLISH", a.generation.ID, a.generation.Progress)
+				args = new(redis.Args).Add("PUBLISH", a.generation.ID, mock.Anything)
 				f.conn.On("Do", args...).Return("", nil)
 			},
 		},
@@ -300,10 +306,15 @@ func TestFeedRepo_UpdateProgress(t *testing.T) {
 			setupMocks: func(a *args, f *feedFields) {
 				f.client.On("Connection").Return(f.conn)
 				f.conn.On("Close").Return(nil)
-				args := new(redis.Args).Add("HSET", a.generation.ID).Add(mock.Anything, a.generation.Progress)
+
+				args := new(redis.Args).
+					Add("HSET", a.generation.ID).
+					Add(mock.Anything, a.generation.Progress).
+					Add(mock.Anything, a.generation.DataFetched).
+					Add(mock.Anything, a.generation.FilesUploaded)
 				f.conn.On("Do", args...).Return("", nil)
 
-				args = new(redis.Args).Add("PUBLISH", a.generation.ID, a.generation.Progress)
+				args = new(redis.Args).Add("PUBLISH", a.generation.ID, mock.Anything)
 				f.conn.On("Do", args...).Return("", nil)
 			},
 		},
@@ -325,6 +336,8 @@ func TestFeedRepo_UpdateProgress(t *testing.T) {
 				args := new(redis.Args).
 					Add("HSET", a.generation.ID).
 					Add(mock.Anything, a.generation.Progress).
+					Add(mock.Anything, a.generation.DataFetched).
+					Add(mock.Anything, a.generation.FilesUploaded).
 					Add(mock.Anything, a.generation.EndTime.Unix())
 				f.conn.On("Do", args...).Return("", defaultErr)
 			},
@@ -348,10 +361,12 @@ func TestFeedRepo_UpdateProgress(t *testing.T) {
 				args := new(redis.Args).
 					Add("HSET", a.generation.ID).
 					Add(mock.Anything, a.generation.Progress).
+					Add(mock.Anything, a.generation.DataFetched).
+					Add(mock.Anything, a.generation.FilesUploaded).
 					Add(mock.Anything, a.generation.EndTime.Unix())
 				f.conn.On("Do", args...).Return("", nil)
 
-				args = new(redis.Args).Add("PUBLISH", a.generation.ID, a.generation.Progress)
+				args = new(redis.Args).Add("PUBLISH", a.generation.ID, mock.Anything)
 				f.conn.On("Do", args...).Return("", defaultErr)
 			},
 			wantErr: defaultErr,
@@ -363,7 +378,7 @@ func TestFeedRepo_UpdateProgress(t *testing.T) {
 			tc.setupMocks(tc.args, fields)
 			feedRepo := repository.NewFeedRepo(fields.client)
 
-			gotErr := feedRepo.UpdateProgress(tc.args.ctx, tc.args.generation)
+			gotErr := feedRepo.UpdateGenerationState(tc.args.ctx, tc.args.generation)
 
 			assert.Equal(t, tc.wantErr, gotErr)
 			fields.assertExpectations(t)

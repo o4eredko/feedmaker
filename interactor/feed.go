@@ -21,8 +21,9 @@ type (
 	}
 
 	DataFetcher interface {
-		CountRecords(ctx context.Context) (uint, error)
 		StreamData(ctx context.Context) error
+		OnDataFetched(func())
+		OnProgress(func(progress uint))
 	}
 
 	FeedFactory interface {
@@ -33,7 +34,6 @@ type (
 
 	FileFormatter interface {
 		FormatFiles(ctx context.Context) error
-		OnProgress(func(progress uint))
 	}
 
 	Uploader interface {
@@ -44,7 +44,7 @@ type (
 	FeedRepo interface {
 		GetFactoryByGenerationType(generationType string) (FeedFactory, error)
 		StoreGeneration(ctx context.Context, generation *entity.Generation) (*entity.Generation, error)
-		UpdateProgress(ctx context.Context, generation *entity.Generation) error
+		UpdateGenerationState(ctx context.Context, generation *entity.Generation) error
 		ListGenerations(ctx context.Context) ([]*entity.Generation, error)
 		ListAllowedTypes(ctx context.Context) ([]string, error)
 		IsAllowedType(ctx context.Context, generationType string) (bool, error)
@@ -102,7 +102,8 @@ func (i *feedInteractor) GenerateFeed(ctx context.Context, generationType string
 	dataFetcher := factory.CreateDataFetcher(recordStream)
 	fileFormatter := factory.CreateFileFormatter(recordStream, fileStream)
 	uploader := factory.CreateUploader(fileStream)
-	fileFormatter.OnProgress(i.onProgress(generation))
+	dataFetcher.OnDataFetched(i.onDataFetched(generation))
+	dataFetcher.OnProgress(i.onProgress(generation))
 	uploader.OnUpload(i.onFileUploaded(generation))
 
 	var wg sync.WaitGroup
@@ -142,7 +143,7 @@ func (i *feedInteractor) GenerateFeed(ctx context.Context, generationType string
 func (i *feedInteractor) onProgress(generation *entity.Generation) func(uint) {
 	return func(progress uint) {
 		generation.SetProgress(progress)
-		if err := i.feeds.UpdateProgress(context.Background(), generation); err != nil {
+		if err := i.feeds.UpdateGenerationState(context.Background(), generation); err != nil {
 			log.Error().Err(err).
 				Msgf("Cannot update progress for %s %v", generation.ID, progress)
 		}
@@ -152,9 +153,19 @@ func (i *feedInteractor) onProgress(generation *entity.Generation) func(uint) {
 func (i *feedInteractor) onFileUploaded(generation *entity.Generation) func(uint) {
 	return func(uploadedNum uint) {
 		generation.FilesUploaded++
-		if err := i.feeds.UpdateProgress(context.Background(), generation); err != nil {
+		if err := i.feeds.UpdateGenerationState(context.Background(), generation); err != nil {
 			log.Error().Err(err).
-				Msgf("Cannot update state for %s", generation.ID)
+				Msgf("Cannot update file uploaded for %s %v", generation.ID, generation.FilesUploaded)
+		}
+	}
+}
+
+func (i *feedInteractor) onDataFetched(generation *entity.Generation) func() {
+	return func() {
+		generation.DataFetched = true
+		if err := i.feeds.UpdateGenerationState(context.Background(), generation); err != nil {
+			log.Error().Err(err).
+				Msgf("Cannot update data fetched for %s", generation.ID)
 		}
 	}
 }
