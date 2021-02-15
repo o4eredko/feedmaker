@@ -3,12 +3,18 @@ package repository
 import (
 	"context"
 	"database/sql"
+
+	"github.com/rs/zerolog/log"
 )
 
 type (
 	Database interface {
 		QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
 		QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
+	}
+
+	RecordValidator interface {
+		Validate([]string) error
 	}
 
 	SqlDataFetcher struct {
@@ -21,18 +27,12 @@ type (
 		progress         uint
 		onDataFetched    func()
 		onProgress       func(progress uint)
+		validators       []RecordValidator
 	}
 )
 
-func (s *SqlDataFetcher) countRecords(ctx context.Context) error {
-	row := s.Db.QueryRowContext(ctx, s.CountQuery)
-	if row.Err() != nil {
-		return row.Err()
-	}
-	if err := row.Scan(&s.recordsCount); err != nil {
-		return err
-	}
-	return nil
+func (s *SqlDataFetcher) AddValidator(validator RecordValidator) {
+	s.validators = append(s.validators, validator)
 }
 
 func (s *SqlDataFetcher) StreamData(ctx context.Context) error {
@@ -63,11 +63,36 @@ func (s *SqlDataFetcher) StreamData(ctx context.Context) error {
 		if err := rows.Scan(values...); err != nil {
 			return err
 		}
-		s.OutStream <- rawBytesToString(values)
+		record := rawBytesToString(values)
+		if err := s.validate(record); err != nil {
+			log.Error().Err(err).Msgf("invalid record: %s", record)
+		} else {
+			s.OutStream <- record
+		}
 		s.recordsProceeded++
 		s.updateProgress()
 	}
 	return rows.Err()
+}
+
+func (s *SqlDataFetcher) countRecords(ctx context.Context) error {
+	row := s.Db.QueryRowContext(ctx, s.CountQuery)
+	if row.Err() != nil {
+		return row.Err()
+	}
+	if err := row.Scan(&s.recordsCount); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *SqlDataFetcher) validate(record []string) error {
+	for _, validator := range s.validators {
+		if err := validator.Validate(record); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *SqlDataFetcher) updateProgress() {
