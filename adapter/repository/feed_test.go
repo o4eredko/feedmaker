@@ -300,11 +300,7 @@ func TestFeedRepo_UpdateGenerationState(t *testing.T) {
 					Add(mock.Anything, a.generation.EndTime.Unix())
 				f.conn.On("Do", args...).Return("", nil)
 
-				args = new(redis.Args).Add(
-					"PUBLISH",
-					fmt.Sprintf("%s.updated", a.generation.ID),
-					mock.Anything,
-				)
+				args = new(redis.Args).Add("PUBLISH", "generation.updated", a.generation.ID)
 				f.conn.On("Do", args...).Return("", nil)
 			},
 		},
@@ -330,11 +326,7 @@ func TestFeedRepo_UpdateGenerationState(t *testing.T) {
 					Add(mock.Anything, a.generation.FilesUploaded)
 				f.conn.On("Do", args...).Return("", nil)
 
-				args = new(redis.Args).Add(
-					"PUBLISH",
-					fmt.Sprintf("%s.updated", a.generation.ID),
-					mock.Anything,
-				)
+				args = new(redis.Args).Add("PUBLISH", "generation.updated", a.generation.ID)
 				f.conn.On("Do", args...).Return("", nil)
 			},
 		},
@@ -386,11 +378,7 @@ func TestFeedRepo_UpdateGenerationState(t *testing.T) {
 					Add(mock.Anything, a.generation.EndTime.Unix())
 				f.conn.On("Do", args...).Return("", nil)
 
-				args = new(redis.Args).Add(
-					"PUBLISH",
-					fmt.Sprintf("%s.updated", a.generation.ID),
-					mock.Anything,
-				)
+				args = new(redis.Args).Add("PUBLISH", "generation.updated", a.generation.ID)
 				f.conn.On("Do", args...).Return("", defaultErr)
 			},
 			wantErr: defaultErr,
@@ -617,6 +605,135 @@ func TestFeedRepo_OnGenerationCanceled(t *testing.T) {
 
 			assert.Equal(t, tc.wantErr, gotErr)
 			assert.Equal(t, tc.mustCallback, callbackCalled, "Callback called mismatch")
+			fields.assertExpectations(t)
+		})
+	}
+}
+
+func TestFeedRepo_OnGenerationsUpdated(t *testing.T) {
+	type args struct {
+		ctx      context.Context
+		callback func(generation *entity.Generation)
+	}
+	testCases := []struct {
+		name       string
+		args       *args
+		setupMocks func(a *args, f *feedFields)
+		want       *entity.Generation
+		wantErr    error
+	}{
+		{
+			name: "succeed",
+			args: &args{ctx: helper.TimeoutCtx(t, context.Background(), time.Millisecond)},
+			setupMocks: func(a *args, f *feedFields) {
+				channel := "generation.updated"
+				f.client.On("PubSub").Return(f.pubsub)
+				f.client.On("Connection").Return(f.conn)
+				f.pubsub.On("Subscribe", channel).Return(nil)
+
+				f.pubsub.On("Receive").Return(redis.Message{Channel: channel, Data: []byte("abc")})
+				f.conn.On("Do", "HGETALL", "abc").Return([]interface{}{
+					[]byte("type"), []byte("test"),
+					[]byte("progress"), []byte("99"),
+					[]byte("files_uploaded"), []byte("5"),
+					[]byte("data_fetched"), []byte("1"),
+					[]byte("start_time"), []byte(strconv.Itoa(int(time.Unix(10, 0).Unix()))),
+				}, nil)
+
+				f.pubsub.On("Unsubscribe", channel).Return(nil)
+				f.pubsub.On("Close").Return(nil)
+				f.conn.On("Close").Return(nil)
+			},
+			want: &entity.Generation{
+				ID:            "abc",
+				Type:          "test",
+				Progress:      99,
+				DataFetched:   true,
+				FilesUploaded: 5,
+				StartTime:     time.Unix(10, 0),
+			},
+			wantErr: context.DeadlineExceeded,
+		},
+		{
+			name: "Subscribe error",
+			args: &args{ctx: context.Background()},
+			setupMocks: func(a *args, f *feedFields) {
+				channel := "generation.updated"
+				f.client.On("PubSub").Return(f.pubsub)
+				f.pubsub.On("Subscribe", channel).Return(defaultErr)
+				f.pubsub.On("Close").Return(nil)
+			},
+			wantErr: defaultErr,
+		},
+		{
+			name: "Receive error",
+			args: &args{
+				ctx: context.Background(),
+			},
+			setupMocks: func(a *args, f *feedFields) {
+				channel := "generation.updated"
+				f.client.On("PubSub").Return(f.pubsub)
+				f.pubsub.On("Subscribe", channel).Return(nil)
+
+				f.pubsub.On("Receive").Return(defaultErr)
+
+				f.pubsub.On("Unsubscribe", channel).Return(nil)
+				f.pubsub.On("Close").Return(nil)
+			},
+			wantErr: defaultErr,
+		},
+		{
+			name: "context error",
+			args: &args{
+				ctx: helper.TimeoutCtx(t, context.Background(), time.Nanosecond),
+			},
+			setupMocks: func(a *args, f *feedFields) {
+				channel := "generation.updated"
+				f.client.On("PubSub").Return(f.pubsub)
+				f.pubsub.On("Subscribe", channel).Return(nil)
+
+				f.pubsub.On("Receive").
+					Return(redis.Message{Channel: channel, Data: []byte("1")}).
+					After(time.Second).Maybe()
+
+				f.pubsub.On("Unsubscribe", channel).Return(nil)
+				f.pubsub.On("Close").Return(nil)
+			},
+			wantErr: context.DeadlineExceeded,
+		},
+		{
+			name: "HGETALL error",
+			args: &args{ctx: helper.TimeoutCtx(t, context.Background(), time.Second)},
+			setupMocks: func(a *args, f *feedFields) {
+				channel := "generation.updated"
+				f.client.On("PubSub").Return(f.pubsub)
+				f.client.On("Connection").Return(f.conn)
+				f.pubsub.On("Subscribe", channel).Return(nil)
+
+				f.pubsub.On("Receive").Return(redis.Message{Channel: channel, Data: []byte("abc")})
+				f.conn.On("Do", "HGETALL", "abc").Return(nil, defaultErr)
+
+				f.pubsub.On("Unsubscribe", channel).Return(nil)
+				f.pubsub.On("Close").Return(nil)
+				f.conn.On("Close").Return(nil)
+			},
+			wantErr: defaultErr,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var got *entity.Generation
+			fields := defaultFeedFields()
+			tc.setupMocks(tc.args, fields)
+			feedRepo := repository.NewFeedRepo(fields.client)
+			tc.args.callback = func(g *entity.Generation) {
+				got = g
+			}
+
+			gotErr := feedRepo.OnGenerationsUpdated(tc.args.ctx, tc.args.callback)
+
+			assert.Equal(t, tc.want, got)
+			assert.Equal(t, tc.wantErr, gotErr)
 			fields.assertExpectations(t)
 		})
 	}

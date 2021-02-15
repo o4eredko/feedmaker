@@ -140,6 +140,7 @@ func makeGenerationFromRedisValues(v map[string]string) (*entity.Generation, err
 }
 
 func (r *feedRepo) UpdateGenerationState(ctx context.Context, generation *entity.Generation) error {
+	channel := "generation.updated"
 	conn := r.client.Connection()
 	defer conn.Close()
 	hashArgs := new(redis.Args).Add(generation.ID).
@@ -153,8 +154,7 @@ func (r *feedRepo) UpdateGenerationState(ctx context.Context, generation *entity
 	if err != nil {
 		return err
 	}
-	channel := fmt.Sprintf("%s.updated", generation.ID)
-	_, err = conn.Do("PUBLISH", channel, "1")
+	_, err = conn.Do("PUBLISH", channel, generation.ID)
 	if err != nil {
 		return err
 	}
@@ -228,7 +228,7 @@ func (r *feedRepo) OnGenerationCanceled(ctx context.Context, generationID string
 }
 
 func (r *feedRepo) OnGenerationsUpdated(ctx context.Context, callback func(*entity.Generation)) error {
-	channel := "generation_updated"
+	channel := "generation.updated"
 	errChan := make(chan error)
 	pubsub := r.client.PubSub()
 	defer pubsub.Close()
@@ -250,9 +250,7 @@ func (r *feedRepo) OnGenerationsUpdated(ctx context.Context, callback func(*enti
 						errChan <- err
 					} else {
 						callback(generation)
-						errChan <- nil
 					}
-					return
 				}
 			}
 		}
