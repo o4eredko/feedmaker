@@ -86,15 +86,7 @@ func (h *handler) ScheduleGeneration(w http.ResponseWriter, r *http.Request) {
 			ErrReadingRequestBody, err.Error()))
 		return
 	}
-	cmd, err := scheduler.NewCmd(h.feeds.GenerateFeed, context.Background(), generationType)
-	if err != nil {
-		errorResponse(w, http.StatusInternalServerError, err)
-		return
-	}
-	schedule := scheduler.NewSchedule(scheduleIn.StartTimestamp, scheduleIn.DelayInterval)
-	taskToSchedule := scheduler.NewTask(cmd, schedule)
-	taskID := scheduler.TaskID(generationType)
-	if err := h.scheduler.ScheduleTask(taskID, taskToSchedule); err != nil {
+	if err := h.scheduleGeneration(generationType, scheduleIn); err != nil {
 		errorResponse(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -122,4 +114,23 @@ func (h *handler) UnscheduleGeneration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusAccepted)
+}
+
+func (h *handler) scheduleGeneration(generationType string, scheduleIn *scheduleTaskIn) error {
+	taskToSchedule, err := h.makeTask(generationType, scheduleIn)
+	if err != nil {
+		return err
+	}
+	taskID := scheduler.TaskID(generationType)
+	return h.scheduler.ScheduleTask(taskID, taskToSchedule)
+}
+
+func (h *handler) makeTask(generationType string, scheduleIn *scheduleTaskIn) (*scheduler.Task, error) {
+	cmd, err := scheduler.NewCmd(h.feeds.GenerateFeed, context.Background(), generationType)
+	if err != nil {
+		return nil, err
+	}
+	schedule := scheduler.NewSchedule(scheduleIn.StartTimestamp, scheduleIn.DelayInterval)
+	taskToSchedule := scheduler.NewTask(cmd, schedule)
+	return taskToSchedule, nil
 }
