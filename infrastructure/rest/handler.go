@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"go-feedmaker/infrastructure/scheduler"
-	"go-feedmaker/infrastructure/scheduler/task"
 	"go-feedmaker/interactor"
 )
 
@@ -18,9 +17,9 @@ type (
 	}
 
 	Scheduler interface {
-		ScheduleTask(taskID scheduler.TaskID, task *task.Task) error
+		ScheduleTask(taskID scheduler.TaskID, task *scheduler.Task) error
 		RemoveTask(taskID scheduler.TaskID) error
-		ListSchedules() (map[scheduler.TaskID]*task.Schedule, error)
+		ListSchedules() (map[scheduler.TaskID]*scheduler.Schedule, error)
 	}
 )
 
@@ -87,15 +86,7 @@ func (h *handler) ScheduleGeneration(w http.ResponseWriter, r *http.Request) {
 			ErrReadingRequestBody, err.Error()))
 		return
 	}
-	cmd, err := task.NewCmd(h.feeds.GenerateFeed, context.Background(), generationType)
-	if err != nil {
-		errorResponse(w, http.StatusInternalServerError, err)
-		return
-	}
-	schedule := task.NewSchedule(scheduleIn.StartTimestamp, scheduleIn.DelayInterval)
-	taskToSchedule := task.NewTask(cmd, schedule)
-	taskID := scheduler.TaskID(generationType)
-	if err := h.scheduler.ScheduleTask(taskID, taskToSchedule); err != nil {
+	if err := h.scheduleGeneration(generationType, scheduleIn); err != nil {
 		errorResponse(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -108,8 +99,7 @@ func (h *handler) ListSchedules(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, http.StatusInternalServerError, err)
 		return
 	}
-	schedulesOut := makeSchedulesOut(schedules)
-	jsonResponse(w, http.StatusCreated, schedulesOut)
+	jsonResponse(w, http.StatusCreated, schedules)
 }
 
 func (h *handler) UnscheduleGeneration(w http.ResponseWriter, r *http.Request) {
@@ -124,4 +114,23 @@ func (h *handler) UnscheduleGeneration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusAccepted)
+}
+
+func (h *handler) scheduleGeneration(generationType string, scheduleIn *scheduleTaskIn) error {
+	taskToSchedule, err := h.makeTask(generationType, scheduleIn)
+	if err != nil {
+		return err
+	}
+	taskID := scheduler.TaskID(generationType)
+	return h.scheduler.ScheduleTask(taskID, taskToSchedule)
+}
+
+func (h *handler) makeTask(generationType string, scheduleIn *scheduleTaskIn) (*scheduler.Task, error) {
+	cmd, err := scheduler.NewCmd(h.feeds.GenerateFeed, context.Background(), generationType)
+	if err != nil {
+		return nil, err
+	}
+	schedule := scheduler.NewSchedule(scheduleIn.StartTimestamp, scheduleIn.DelayInterval)
+	taskToSchedule := scheduler.NewTask(cmd, schedule)
+	return taskToSchedule, nil
 }

@@ -423,7 +423,7 @@ func Test_handler_ListSchedules(t *testing.T) {
 					Return(defaultTaskSchedules, nil)
 			},
 			wantStatusCode: http.StatusCreated,
-			wantBody:       mustMarshal(rest.MakeSchedulesOut(defaultTaskSchedules)),
+			wantBody:       mustMarshal(defaultTaskSchedules),
 		},
 		{
 			name:   "error in scheduler.ListSchedules",

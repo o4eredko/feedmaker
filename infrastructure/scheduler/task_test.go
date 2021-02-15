@@ -1,4 +1,4 @@
-package task_test
+package scheduler_test
 
 import (
 	"testing"
@@ -6,27 +6,27 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"go-feedmaker/infrastructure/scheduler"
 	"go-feedmaker/infrastructure/scheduler/mocks"
-	"go-feedmaker/infrastructure/scheduler/task"
 )
 
 type (
 	taskFields struct {
 		cmd      *mocks.Runner
-		schedule *task.Schedule
+		schedule *scheduler.Schedule
 	}
 )
 
 func defaultTaskFields() *taskFields {
 	return &taskFields{
 		cmd:      new(mocks.Runner),
-		schedule: task.NewSchedule(time.Now().UTC(), time.Second*42),
+		schedule: scheduler.NewSchedule(time.Now().UTC(), time.Second*42),
 	}
 }
 
-func TestNew(t *testing.T) {
+func TestNewTask(t *testing.T) {
 	fields := defaultTaskFields()
-	gotTask := task.NewTask(fields.cmd, fields.schedule)
+	gotTask := scheduler.NewTask(fields.cmd, fields.schedule)
 	assert.Equal(t, fields.cmd, gotTask.Cmd)
 	assert.Equal(t, fields.schedule, gotTask.Schedule)
 }

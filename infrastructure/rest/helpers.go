@@ -8,9 +8,6 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/rs/zerolog/log"
-
-	"go-feedmaker/infrastructure/scheduler"
-	"go-feedmaker/infrastructure/scheduler/task"
 )
 
 var (
@@ -49,21 +46,4 @@ func extractFromURL(r *http.Request, key string) (string, error) {
 		return "", fmt.Errorf("looking for %v: %w", key, ErrValueNotFoundInURL)
 	}
 	return value, nil
-}
-
-func makeSchedulesOut(schedules map[scheduler.TaskID]*task.Schedule) []*scheduleOut {
-	schedulesOut := make([]*scheduleOut, 0, len(schedules))
-	for taskID, schedule := range schedules {
-		scheduleOut := makeScheduleOut(taskID, schedule)
-		schedulesOut = append(schedulesOut, scheduleOut)
-	}
-	return schedulesOut
-}
-
-func makeScheduleOut(taskID scheduler.TaskID, schedule *task.Schedule) *scheduleOut {
-	return &scheduleOut{
-		GenerationType: string(taskID),
-		StartTimestamp: schedule.StartTimestamp(),
-		DelayInterval:  schedule.FireInterval(),
-	}
 }
