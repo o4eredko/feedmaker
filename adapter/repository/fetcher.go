@@ -8,7 +8,7 @@ import (
 )
 
 type (
-	Database interface {
+	SqlGateway interface {
 		QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
 		QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
 	}
@@ -21,7 +21,7 @@ type (
 		OutStream        chan<- []string
 		CountQuery       string
 		SelectQuery      string
-		Db               Database
+		Db               SqlGateway
 		recordsCount     uint
 		recordsProceeded uint
 		progress         uint

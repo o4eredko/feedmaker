@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	ErrSingleRecordOverflowsLimits = errors.New("Limits are too strict: single record overflows them")
+	ErrSingleRecordOverflowsLimits = errors.New("limits are too strict: single record overflows them")
 )
 
 type CsvFormatter struct {
