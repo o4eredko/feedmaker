@@ -21,3 +21,7 @@ func (s *Scheduler) SetMapper(mapper TaskIDMapper) {
 func (m *Mapper) SetMapping(mapping map[TaskID]cron.EntryID) {
 	m.mapping = mapping
 }
+
+func (s *scheduleSaver) RedisClient() RedisClient {
+	return s.client
+}
