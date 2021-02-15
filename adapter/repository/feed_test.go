@@ -288,7 +288,11 @@ func TestFeedRepo_UpdateGenerationState(t *testing.T) {
 					Add(mock.Anything, a.generation.EndTime.Unix())
 				f.conn.On("Do", args...).Return("", nil)
 
-				args = new(redis.Args).Add("PUBLISH", a.generation.ID, mock.Anything)
+				args = new(redis.Args).Add(
+					"PUBLISH",
+					fmt.Sprintf("%s.updated", a.generation.ID),
+					mock.Anything,
+				)
 				f.conn.On("Do", args...).Return("", nil)
 			},
 		},
@@ -314,7 +318,11 @@ func TestFeedRepo_UpdateGenerationState(t *testing.T) {
 					Add(mock.Anything, a.generation.FilesUploaded)
 				f.conn.On("Do", args...).Return("", nil)
 
-				args = new(redis.Args).Add("PUBLISH", a.generation.ID, mock.Anything)
+				args = new(redis.Args).Add(
+					"PUBLISH",
+					fmt.Sprintf("%s.updated", a.generation.ID),
+					mock.Anything,
+				)
 				f.conn.On("Do", args...).Return("", nil)
 			},
 		},
@@ -366,7 +374,11 @@ func TestFeedRepo_UpdateGenerationState(t *testing.T) {
 					Add(mock.Anything, a.generation.EndTime.Unix())
 				f.conn.On("Do", args...).Return("", nil)
 
-				args = new(redis.Args).Add("PUBLISH", a.generation.ID, mock.Anything)
+				args = new(redis.Args).Add(
+					"PUBLISH",
+					fmt.Sprintf("%s.updated", a.generation.ID),
+					mock.Anything,
+				)
 				f.conn.On("Do", args...).Return("", defaultErr)
 			},
 			wantErr: defaultErr,
@@ -379,6 +391,57 @@ func TestFeedRepo_UpdateGenerationState(t *testing.T) {
 			feedRepo := repository.NewFeedRepo(fields.client)
 
 			gotErr := feedRepo.UpdateGenerationState(tc.args.ctx, tc.args.generation)
+
+			assert.Equal(t, tc.wantErr, gotErr)
+			fields.assertExpectations(t)
+		})
+	}
+}
+
+func TestFeedRepo_DeleteGeneration(t *testing.T) {
+	type args struct {
+		ctx context.Context
+		id  string
+	}
+	testCases := []struct {
+		name       string
+		args       *args
+		setupMocks func(*args, *feedFields)
+		wantErr    error
+	}{
+		{
+			name: "succeed",
+			args: &args{
+				ctx: context.Background(),
+				id:  uuid.New().String(),
+			},
+			setupMocks: func(a *args, f *feedFields) {
+				f.client.On("Connection").Return(f.conn)
+				f.conn.On("Close").Return(nil)
+				f.conn.On("Do", "DEL", a.id).Return("", nil)
+			},
+		},
+		{
+			name: "DEL error",
+			args: &args{
+				ctx: context.Background(),
+				id:  uuid.New().String(),
+			},
+			setupMocks: func(a *args, f *feedFields) {
+				f.client.On("Connection").Return(f.conn)
+				f.conn.On("Close").Return(nil)
+				f.conn.On("Do", "DEL", a.id).Return("", defaultErr)
+			},
+			wantErr: defaultErr,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			fields := defaultFeedFields()
+			tc.setupMocks(tc.args, fields)
+			feedRepo := repository.NewFeedRepo(fields.client)
+
+			gotErr := feedRepo.DeleteGeneration(tc.args.ctx, tc.args.id)
 
 			assert.Equal(t, tc.wantErr, gotErr)
 			fields.assertExpectations(t)

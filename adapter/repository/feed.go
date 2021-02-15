@@ -134,11 +134,20 @@ func (r *feedRepo) UpdateGenerationState(ctx context.Context, generation *entity
 	if err != nil {
 		return err
 	}
-	_, err = conn.Do("PUBLISH", generation.ID, "1")
+	channel := fmt.Sprintf("%s.updated", generation.ID)
+	_, err = conn.Do("PUBLISH", channel, "1")
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func (r *feedRepo) DeleteGeneration(ctx context.Context, generationID string) error {
+	conn := r.client.Connection()
+	defer conn.Close()
+
+	_, err := conn.Do("DEL", generationID)
+	return err
 }
 
 func (r *feedRepo) ListAllowedTypes(ctx context.Context) ([]string, error) {
@@ -159,6 +168,48 @@ func (r *feedRepo) CancelGeneration(ctx context.Context, id string) error {
 
 func (r *feedRepo) OnGenerationCanceled(ctx context.Context, generationID string, callback func()) error {
 	channel := fmt.Sprintf("%s.canceled", generationID)
+	pubsub := r.client.PubSub()
+	defer pubsub.Close()
+	if err := pubsub.Subscribe(channel); err != nil {
+		return err
+	}
+	defer pubsub.Unsubscribe(channel)
+	errChan := make(chan error)
+
+	go func() {
+		for {
+			switch v := pubsub.Receive().(type) {
+			case error:
+				errChan <- v
+				return
+			case redis.Message:
+				if v.Channel == channel {
+					callback()
+					errChan <- nil
+					return
+				}
+			}
+		}
+	}()
+
+	ticker := time.NewTicker(time.Second * 3)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			if err := pubsub.Ping(""); err != nil {
+				return err
+			}
+		case <-ctx.Done():
+			return ctx.Err()
+		case err := <-errChan:
+			return err
+		}
+	}
+}
+
+func (r *feedRepo) OnStateUpdated(ctx context.Context, generationID string, callback func()) error {
+	channel := fmt.Sprintf("%s.updated", generationID)
 	pubsub := r.client.PubSub()
 	defer pubsub.Close()
 	if err := pubsub.Subscribe(channel); err != nil {
