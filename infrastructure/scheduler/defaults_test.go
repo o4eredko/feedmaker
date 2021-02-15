@@ -13,7 +13,7 @@ var (
 	defaultErr              = errors.New("default error")
 	defaultEntryID          = cron.EntryID(42)
 	defaultTaskID           = scheduler.TaskID("foobar")
-	defaultSchedule         = scheduler.NewSchedule(time.Now().UTC(), time.Second*42)
+	defaultSchedule         = scheduler.NewSchedule(time.Now().UTC().Truncate(time.Second), time.Second*42)
 	defaultScheduledTaskIDs = []scheduler.TaskID{defaultTaskID, "spam", "ham", "eggs"}
 	defaultTaskSchedules    = makeTaskSchedules(defaultScheduledTaskIDs)
 )
