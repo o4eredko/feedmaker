@@ -26,8 +26,3 @@ func (_m *FileFormatter) FormatFiles(ctx context.Context) error {
 
 	return r0
 }
-
-// OnProgress provides a mock function with given fields: _a0
-func (_m *FileFormatter) OnProgress(_a0 func(uint)) {
-	_m.Called(_a0)
-}

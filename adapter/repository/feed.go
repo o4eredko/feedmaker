@@ -64,6 +64,8 @@ func (r *feedRepo) StoreGeneration(ctx context.Context, generation *entity.Gener
 		Add(generation.ID).
 		Add("type", generation.Type).
 		Add("progress", generation.Progress).
+		Add("data_fetched", generation.DataFetched).
+		Add("files_uploaded", generation.FilesUploaded).
 		Add("start_time", generation.StartTime.Unix())
 	if !generation.EndTime.IsZero() {
 		hashArgs = hashArgs.Add("end_time", generation.EndTime.Unix())
@@ -72,6 +74,21 @@ func (r *feedRepo) StoreGeneration(ctx context.Context, generation *entity.Gener
 
 	_, err := conn.Do("EXEC")
 	return err
+}
+
+func (r *feedRepo) GetGeneration(ctx context.Context, generationID string) (*entity.Generation, error) {
+	conn := r.client.Connection()
+	defer conn.Close()
+	stringMap, err := redis.StringMap(conn.Do("HGETALL", generationID))
+	if err != nil {
+		return nil, err
+	}
+	stringMap["id"] = generationID
+	generation, err := makeGenerationFromRedisValues(stringMap)
+	if err != nil {
+		return nil, err
+	}
+	return generation, nil
 }
 
 func (r *feedRepo) ListGenerations(ctx context.Context) ([]*entity.Generation, error) {
@@ -83,12 +100,7 @@ func (r *feedRepo) ListGenerations(ctx context.Context) ([]*entity.Generation, e
 		return nil, err
 	}
 	for _, id := range generationIDs {
-		stringMap, err := redis.StringMap(conn.Do("HGETALL", id))
-		if err != nil {
-			return nil, err
-		}
-		stringMap["id"] = id
-		generation, err := makeGenerationFromRedisValues(stringMap)
+		generation, err := r.GetGeneration(ctx, id)
 		if err != nil {
 			return nil, err
 		}
@@ -98,9 +110,17 @@ func (r *feedRepo) ListGenerations(ctx context.Context) ([]*entity.Generation, e
 }
 
 func makeGenerationFromRedisValues(v map[string]string) (*entity.Generation, error) {
+	progress, _ := strconv.ParseUint(v["progress"], 10, 32)
+	filesUploaded, _ := strconv.ParseUint(v["files_uploaded"], 10, 32)
+	dataFetched, _ := strconv.ParseBool(v["data_fetched"])
+
 	generation := new(entity.Generation)
 	generation.ID = v["id"]
 	generation.Type = v["type"]
+	generation.Progress = uint(progress)
+	generation.DataFetched = dataFetched
+	generation.FilesUploaded = uint(filesUploaded)
+
 	if timestamp, ok := v["start_time"]; ok && len(timestamp) > 0 {
 		startTime, err := strconv.ParseInt(timestamp, 10, 64)
 		if err != nil {
@@ -115,13 +135,18 @@ func makeGenerationFromRedisValues(v map[string]string) (*entity.Generation, err
 		}
 		generation.EndTime = time.Unix(startTime, 0)
 	}
+
 	return generation, nil
 }
 
-func (r *feedRepo) UpdateProgress(ctx context.Context, generation *entity.Generation) error {
+func (r *feedRepo) UpdateGenerationState(ctx context.Context, generation *entity.Generation) error {
+	channel := "generation.updated"
 	conn := r.client.Connection()
 	defer conn.Close()
-	hashArgs := new(redis.Args).Add(generation.ID).Add("progress", generation.Progress)
+	hashArgs := new(redis.Args).Add(generation.ID).
+		Add("progress", generation.Progress).
+		Add("data_fetched", generation.DataFetched).
+		Add("files_uploaded", generation.FilesUploaded)
 	if !generation.EndTime.IsZero() {
 		hashArgs = hashArgs.Add("end_time", generation.EndTime.Unix())
 	}
@@ -129,11 +154,19 @@ func (r *feedRepo) UpdateProgress(ctx context.Context, generation *entity.Genera
 	if err != nil {
 		return err
 	}
-	_, err = conn.Do("PUBLISH", generation.ID, generation.Progress)
+	_, err = conn.Do("PUBLISH", channel, generation.ID)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func (r *feedRepo) DeleteGeneration(ctx context.Context, generationID string) error {
+	conn := r.client.Connection()
+	defer conn.Close()
+
+	_, err := conn.Do("DEL", generationID)
+	return err
 }
 
 func (r *feedRepo) ListAllowedTypes(ctx context.Context) ([]string, error) {
@@ -173,6 +206,51 @@ func (r *feedRepo) OnGenerationCanceled(ctx context.Context, generationID string
 					callback()
 					errChan <- nil
 					return
+				}
+			}
+		}
+	}()
+
+	ticker := time.NewTicker(time.Second * 3)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			if err := pubsub.Ping(""); err != nil {
+				return err
+			}
+		case <-ctx.Done():
+			return ctx.Err()
+		case err := <-errChan:
+			return err
+		}
+	}
+}
+
+func (r *feedRepo) OnGenerationsUpdated(ctx context.Context, callback func(*entity.Generation)) error {
+	channel := "generation.updated"
+	errChan := make(chan error)
+	pubsub := r.client.PubSub()
+	defer pubsub.Close()
+
+	if err := pubsub.Subscribe(channel); err != nil {
+		return err
+	}
+	defer pubsub.Unsubscribe(channel)
+
+	go func() {
+		for {
+			switch v := pubsub.Receive().(type) {
+			case error:
+				errChan <- v
+				return
+			case redis.Message:
+				if v.Channel == channel {
+					if generation, err := r.GetGeneration(ctx, string(v.Data)); err != nil {
+						errChan <- err
+					} else {
+						callback(generation)
+					}
 				}
 			}
 		}

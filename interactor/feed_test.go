@@ -114,10 +114,11 @@ func TestFeedInteractor_Generate(t *testing.T) {
 				f.factory.On("CreateUploader", mock.Anything).Return(f.uploader)
 
 				f.dataFetcher.
-					On("StreamData", mock.Anything).Return(nil)
-				f.fileFormatter.
-					On("FormatFiles", mock.Anything).Return(nil).
+					On("StreamData", mock.Anything).Return(nil).
+					On("OnDataFetched", mock.Anything).Return(nil).
 					On("OnProgress", mock.Anything).Return(nil)
+				f.fileFormatter.
+					On("FormatFiles", mock.Anything).Return(nil)
 				f.uploader.
 					On("UploadFiles", mock.Anything).Return(nil).
 					On("OnUpload", mock.Anything).Return(nil)
@@ -169,10 +170,11 @@ func TestFeedInteractor_Generate(t *testing.T) {
 				f.factory.On("CreateUploader", mock.Anything).Return(f.uploader)
 
 				f.dataFetcher.
-					On("StreamData", mock.Anything).Return(defaultErr).After(time.Millisecond * 5)
-				f.fileFormatter.
-					On("FormatFiles", mock.Anything).Return(nil).
+					On("StreamData", mock.Anything).Return(defaultErr).After(time.Millisecond*5).
+					On("OnDataFetched", mock.Anything).Return(nil).
 					On("OnProgress", mock.Anything).Return(nil)
+				f.fileFormatter.
+					On("FormatFiles", mock.Anything).Return(nil)
 				f.uploader.
 					On("UploadFiles", mock.Anything).Return(nil).
 					On("OnUpload", mock.Anything).Return(nil)
@@ -202,10 +204,11 @@ func TestFeedInteractor_Generate(t *testing.T) {
 				f.factory.On("CreateUploader", mock.Anything).Return(f.uploader)
 
 				f.dataFetcher.
-					On("StreamData", mock.Anything).Return(nil)
-				f.fileFormatter.
-					On("FormatFiles", mock.Anything).Return(defaultErr).After(time.Millisecond*5).
+					On("StreamData", mock.Anything).Return(nil).
+					On("OnDataFetched", mock.Anything).Return(nil).
 					On("OnProgress", mock.Anything).Return(nil)
+				f.fileFormatter.
+					On("FormatFiles", mock.Anything).Return(defaultErr).After(time.Millisecond * 5)
 				f.uploader.
 					On("UploadFiles", mock.Anything).Return(nil).
 					On("OnUpload", mock.Anything).Return(nil)
@@ -235,10 +238,11 @@ func TestFeedInteractor_Generate(t *testing.T) {
 				f.factory.On("CreateUploader", mock.Anything).Return(f.uploader)
 
 				f.dataFetcher.
-					On("StreamData", mock.Anything).Return(nil)
-				f.fileFormatter.
-					On("FormatFiles", mock.Anything).Return(nil).
+					On("StreamData", mock.Anything).Return(nil).
+					On("OnDataFetched", mock.Anything).Return(nil).
 					On("OnProgress", mock.Anything).Return(nil)
+				f.fileFormatter.
+					On("FormatFiles", mock.Anything).Return(nil)
 				f.uploader.
 					On("UploadFiles", mock.Anything).Return(defaultErr).After(time.Millisecond*5).
 					On("OnUpload", mock.Anything).Return(nil)

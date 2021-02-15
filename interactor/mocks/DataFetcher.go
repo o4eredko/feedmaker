@@ -13,25 +13,14 @@ type DataFetcher struct {
 	mock.Mock
 }
 
-// CountRecords provides a mock function with given fields: ctx
-func (_m *DataFetcher) CountRecords(ctx context.Context) (uint, error) {
-	ret := _m.Called(ctx)
+// OnDataFetched provides a mock function with given fields: _a0
+func (_m *DataFetcher) OnDataFetched(_a0 func()) {
+	_m.Called(_a0)
+}
 
-	var r0 uint
-	if rf, ok := ret.Get(0).(func(context.Context) uint); ok {
-		r0 = rf(ctx)
-	} else {
-		r0 = ret.Get(0).(uint)
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
+// OnProgress provides a mock function with given fields: _a0
+func (_m *DataFetcher) OnProgress(_a0 func(uint)) {
+	_m.Called(_a0)
 }
 
 // StreamData provides a mock function with given fields: ctx
