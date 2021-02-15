@@ -21,6 +21,15 @@ type (
 	}
 )
 
+func NewFtpUploader(ftpGateway FtpGateway, generationType string, inStream <-chan io.ReadCloser) *ftpUploader {
+	return &ftpUploader{
+		ftp:            ftpGateway,
+		generationType: generationType,
+		inStream:       inStream,
+		onUpload:       func(uploadedFilesNum uint) {},
+	}
+}
+
 func (u *ftpUploader) UploadFiles(ctx context.Context) error {
 	for {
 		select {

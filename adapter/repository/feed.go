@@ -5,16 +5,23 @@ import (
 	"fmt"
 	"io"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gomodule/redigo/redis"
+	"github.com/inhies/go-bytesize"
 
 	"go-feedmaker/entity"
 	"go-feedmaker/interactor"
 )
 
 type (
+	FeedConfig struct {
+		CountQueryFilename  string            `config:"count_query"`
+		SelectQueryFilename string            `config:"select_query"`
+		FileSizeLimit       bytesize.ByteSize `config:"size_limit"`
+		FileLineLimit       uint              `config:"line_limit"`
+	}
+
 	RedisClient interface {
 		Connection() Connection
 		PubSub() PubSub
@@ -36,23 +43,41 @@ type (
 		client         RedisClient
 		idSetName      string
 		cancelChanName string
+		typeConfigMap  map[string]FeedConfig
+		sqlGateway     SqlGateway
+		ftpGateway     FtpGateway
 	}
 )
 
-func NewFeedRepo(client RedisClient) *feedRepo {
+func NewFeedRepo(client RedisClient, sqlGateway SqlGateway, ftpGateway FtpGateway) *feedRepo {
 	return &feedRepo{
-		client:    client,
-		idSetName: "generationIDs",
+		client:     client,
+		idSetName:  "generationIDs",
+		sqlGateway: sqlGateway,
+		ftpGateway: ftpGateway,
 	}
 }
 
 func (r *feedRepo) GetFactoryByGenerationType(generationType string) (interactor.FeedFactory, error) {
-	switch {
-	case strings.HasPrefix(generationType, "yandex-"):
-		return NewYandexFactory(), nil
-	default:
-		return NewDefaultFactory(), nil
+	config, ok := r.typeConfigMap[generationType]
+	if !ok {
+		return nil, entity.ErrInvalidGenerationType
 	}
+
+	return NewDefaultFactory(config, r.sqlGateway, r.ftpGateway, generationType)
+}
+
+func (r *feedRepo) ListAllowedTypes() []string {
+	types := make([]string, 0, len(r.typeConfigMap))
+	for k := range r.typeConfigMap {
+		types = append(types, k)
+	}
+	return types
+}
+
+func (r *feedRepo) IsAllowedType(generationType string) bool {
+	_, ok := r.typeConfigMap[generationType]
+	return ok
 }
 
 func (r *feedRepo) StoreGeneration(ctx context.Context, generation *entity.Generation) error {
@@ -167,14 +192,6 @@ func (r *feedRepo) DeleteGeneration(ctx context.Context, generationID string) er
 
 	_, err := conn.Do("DEL", generationID)
 	return err
-}
-
-func (r *feedRepo) ListAllowedTypes(ctx context.Context) ([]string, error) {
-	panic("implement me")
-}
-
-func (r *feedRepo) IsAllowedType(ctx context.Context, generationType string) (bool, error) {
-	panic("implement me")
 }
 
 func (r *feedRepo) CancelGeneration(ctx context.Context, id string) error {
