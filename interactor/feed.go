@@ -51,6 +51,7 @@ type (
 		IsCanceled(ctx context.Context, generationID string) (bool, error)
 		CancelGeneration(ctx context.Context, id string) error
 		OnGenerationCanceled(ctx context.Context, id string, callback func()) error
+		OnGenerationsUpdated(ctx context.Context, callback func(*entity.Generation)) error
 	}
 
 	Presenter interface {
@@ -198,6 +199,16 @@ func makeListGenerationsOut(generations []*entity.Generation) *ListGenerationsOu
 		})
 	}
 	return &out
+}
+
+func (i *feedInteractor) WatchGenerationsProgress(ctx context.Context, outStream chan<- *entity.Generation) error {
+	callback := func(generation *entity.Generation) {
+		outStream <- generation
+	}
+	if err := i.feeds.OnGenerationsUpdated(ctx, callback); err != nil {
+		return i.presenter.PresentErr(err)
+	}
+	return nil
 }
 
 func (i *feedInteractor) ListGenerationTypes(ctx context.Context) (interface{}, error) {

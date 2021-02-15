@@ -150,12 +150,18 @@ func TestFeedRepo_ListGenerations(t *testing.T) {
 					On("Do", "HGETALL", "123").
 					Return([]interface{}{
 						[]byte("type"), []byte("test1"),
+						[]byte("progress"), []byte("100"),
+						[]byte("files_uploaded"), []byte("4"),
+						[]byte("data_fetched"), []byte("1"),
 						[]byte("start_time"), []byte(strconv.Itoa(int(time.Unix(1, 0).Unix()))),
 					}, nil)
 				f.conn.
 					On("Do", "HGETALL", "234").
 					Return([]interface{}{
 						[]byte("type"), []byte("test2"),
+						[]byte("progress"), []byte("43"),
+						[]byte("files_uploaded"), []byte("5"),
+						[]byte("data_fetched"), []byte("0"),
 						[]byte("start_time"), []byte(strconv.Itoa(int(time.Unix(11, 0).Unix()))),
 						[]byte("end_time"), []byte(strconv.Itoa(int(time.Unix(20, 0).Unix()))),
 					}, nil)
@@ -163,12 +169,18 @@ func TestFeedRepo_ListGenerations(t *testing.T) {
 			want: []*entity.Generation{
 				{
 					ID: "123", Type: "test1",
-					StartTime: time.Unix(1, 0),
+					Progress:      100,
+					FilesUploaded: 4,
+					DataFetched:   true,
+					StartTime:     time.Unix(1, 0),
 				},
 				{
 					ID: "234", Type: "test2",
-					StartTime: time.Unix(11, 0),
-					EndTime:   time.Unix(20, 0),
+					Progress:      43,
+					FilesUploaded: 5,
+					DataFetched:   false,
+					StartTime:     time.Unix(11, 0),
+					EndTime:       time.Unix(20, 0),
 				},
 			},
 		},

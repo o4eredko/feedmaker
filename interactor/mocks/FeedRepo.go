@@ -155,6 +155,20 @@ func (_m *FeedRepo) OnGenerationCanceled(ctx context.Context, id string, callbac
 	return r0
 }
 
+// OnGenerationsUpdated provides a mock function with given fields: ctx, callback
+func (_m *FeedRepo) OnGenerationsUpdated(ctx context.Context, callback func(*entity.Generation)) error {
+	ret := _m.Called(ctx, callback)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, func(*entity.Generation)) error); ok {
+		r0 = rf(ctx, callback)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // StoreGeneration provides a mock function with given fields: ctx, generation
 func (_m *FeedRepo) StoreGeneration(ctx context.Context, generation *entity.Generation) (*entity.Generation, error) {
 	ret := _m.Called(ctx, generation)
