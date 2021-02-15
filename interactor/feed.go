@@ -18,6 +18,7 @@ type (
 		ListGenerations(ctx context.Context) (interface{}, error)
 		ListGenerationTypes(ctx context.Context) (interface{}, error)
 		CancelGeneration(ctx context.Context, id string) error
+		WatchGenerationsProgress(ctx context.Context, outStream chan<- *entity.Generation) error
 	}
 
 	DataFetcher interface {
