@@ -31,9 +31,9 @@ func NewRouter(handler Handler, wsHandler WSHandler) http.Handler {
 	generations.HandleFunc("/{generation-type}", handler.GenerateFeed).Methods(http.MethodPost)
 	generations.HandleFunc("/{generation-id}", handler.CancelGeneration).Methods(http.MethodDelete)
 
-	generations.HandleFunc("/{generation-id}/schedules", handler.ScheduleGeneration).Methods(http.MethodPost)
+	generations.HandleFunc("/{generation-type}/schedules", handler.ScheduleGeneration).Methods(http.MethodPost)
 	generations.HandleFunc("/schedules", handler.ListSchedules).Methods(http.MethodGet)
-	generations.HandleFunc("/{generation-id}/schedules", handler.UnscheduleGeneration).Methods(http.MethodDelete)
+	generations.HandleFunc("/{generation-type}/schedules", handler.UnscheduleGeneration).Methods(http.MethodDelete)
 
 	ws := router.PathPrefix("/ws").Subrouter()
 	ws.HandleFunc("/progress", wsHandler.ServeWS)

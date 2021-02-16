@@ -95,11 +95,12 @@ func (h *handler) ScheduleGeneration(w http.ResponseWriter, r *http.Request) {
 
 func (h *handler) ListSchedules(w http.ResponseWriter, r *http.Request) {
 	schedules, err := h.scheduler.ListSchedules()
+	schedulesOut := makeSchedulesOut(schedules)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, err)
 		return
 	}
-	jsonResponse(w, http.StatusCreated, schedules)
+	jsonResponse(w, http.StatusCreated, schedulesOut)
 }
 
 func (h *handler) UnscheduleGeneration(w http.ResponseWriter, r *http.Request) {
