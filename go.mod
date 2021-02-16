@@ -12,7 +12,11 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/inhies/go-bytesize v0.0.0-20201103132853-d0aed0d254f8
+	github.com/jlaffaye/ftp v0.0.0-20201112195030-9aae4d151126
+	github.com/o4eredko/configuro v0.0.3
 	github.com/robfig/cron/v3 v3.0.0
 	github.com/rs/zerolog v1.20.0
 	github.com/stretchr/testify v1.7.0
+	golang.org/x/tools v0.0.0-20200612220849-54c614fe050c
+	honnef.co/go/tools v0.0.1-2020.1.4
 )

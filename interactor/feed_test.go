@@ -56,7 +56,7 @@ func defaultFields() *fields {
 }
 
 func (f *fields) newInteractor() interactor.FeedInteractor {
-	return interactor.NewFeedInteractor(f.uploader, f.feeds, f.presenter)
+	return interactor.NewFeedInteractor(f.feeds, f.presenter)
 }
 
 func (f *fields) assertExpectations(t *testing.T) {
@@ -70,8 +70,7 @@ func (f *fields) assertExpectations(t *testing.T) {
 
 func TestNewFeedInteractor(t *testing.T) {
 	fields := defaultFields()
-	i := interactor.NewFeedInteractor(fields.uploader, fields.feeds, fields.presenter)
-	assert.Equal(t, fields.uploader, i.FileRepo())
+	i := interactor.NewFeedInteractor(fields.feeds, fields.presenter)
 	assert.Equal(t, fields.feeds, i.GenerationRepo())
 	assert.Equal(t, fields.presenter, i.Presenter())
 }

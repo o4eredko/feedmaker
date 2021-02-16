@@ -62,7 +62,6 @@ type (
 	}
 
 	feedInteractor struct {
-		uploader  Uploader
 		feeds     FeedRepo
 		presenter Presenter
 	}
@@ -72,10 +71,9 @@ type (
 	ListGenerationsOut []*GenerationsOut
 )
 
-func NewFeedInteractor(files Uploader, generations FeedRepo, presenter Presenter) *feedInteractor {
+func NewFeedInteractor(feeds FeedRepo, presenter Presenter) *feedInteractor {
 	return &feedInteractor{
-		uploader:  files,
-		feeds:     generations,
+		feeds:     feeds,
 		presenter: presenter,
 	}
 }

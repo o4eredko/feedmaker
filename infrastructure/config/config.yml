@@ -1,0 +1,16 @@
+logger:
+  level: debug
+  json_output: false
+
+redis:
+  host: "${REDIS_HOST|localhost}"
+  port: "${REDIS_PORT|6379}"
+  conn_timeout: "1s"
+  pool_size: 5
+
+ftp:
+  host: "${FTP_HOST|localhost}"
+  port: "${FTP_PORT|21}"
+  username: "${FTP_USERNAME}"
+  password: "${FTP_PASSWORD}"
+  conn_timeout: "1s"

@@ -18,8 +18,8 @@ type (
 	RedisConfig struct {
 		Host        string
 		Port        string
-		ConnTimeout time.Duration
-		PoolSize    int
+		ConnTimeout time.Duration `config:"conn_timeout"`
+		PoolSize    int           `config:"pool_size"`
 	}
 
 	RedisDialer interface {

@@ -13,7 +13,7 @@ type (
 	FtpConfig struct {
 		Host        string
 		Port        string
-		ConnTimeout time.Duration
+		ConnTimeout time.Duration `config:"conn_timeout"`
 		Username    string
 		Password    string
 	}

@@ -2,10 +2,6 @@ package interactor
 
 type ExportedFeedInteractor feedInteractor
 
-func (i *feedInteractor) FileRepo() Uploader {
-	return i.uploader
-}
-
 func (i *feedInteractor) GenerationRepo() FeedRepo {
 	return i.feeds
 }
