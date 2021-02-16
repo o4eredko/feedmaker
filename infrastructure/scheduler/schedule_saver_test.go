@@ -7,8 +7,8 @@ import (
 	"github.com/gomodule/redigo/redis"
 	"github.com/stretchr/testify/assert"
 
+	"go-feedmaker/adapter/repository/mocks"
 	"go-feedmaker/infrastructure/scheduler"
-	"go-feedmaker/infrastructure/scheduler/mocks"
 )
 
 type (

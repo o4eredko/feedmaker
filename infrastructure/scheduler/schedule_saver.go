@@ -13,15 +13,7 @@ import (
 
 type (
 	scheduleSaver struct {
-		client RedisClient
-	}
-
-	RedisClient interface {
-		Connection() repository.Connection
-	}
-
-	Connection interface {
-		redis.Conn
+		client repository.RedisClient
 	}
 )
 
@@ -34,7 +26,7 @@ var (
 	ErrInvalidInterval  = errors.New("invalid interval")
 )
 
-func NewScheduleSaver(client RedisClient) *scheduleSaver {
+func NewScheduleSaver(client repository.RedisClient) *scheduleSaver {
 	return &scheduleSaver{
 		client: client,
 	}

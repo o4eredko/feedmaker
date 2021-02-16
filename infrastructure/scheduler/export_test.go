@@ -1,6 +1,10 @@
 package scheduler
 
-import "github.com/robfig/cron/v3"
+import (
+	"github.com/robfig/cron/v3"
+
+	"go-feedmaker/adapter/repository"
+)
 
 func (s *Scheduler) Cron() Croner {
 	return s.cron
@@ -22,6 +26,6 @@ func (m *Mapper) SetMapping(mapping map[TaskID]cron.EntryID) {
 	m.mapping = mapping
 }
 
-func (s *scheduleSaver) RedisClient() RedisClient {
+func (s *scheduleSaver) RedisClient() repository.RedisClient {
 	return s.client
 }

@@ -3,7 +3,7 @@
 package mocks
 
 import (
-	scheduler "go-feedmaker/infrastructure/scheduler"
+	repository "go-feedmaker/adapter/repository"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -14,15 +14,15 @@ type RedisClient struct {
 }
 
 // Connection provides a mock function with given fields:
-func (_m *RedisClient) Connection() scheduler.Connection {
+func (_m *RedisClient) Connection() repository.Connection {
 	ret := _m.Called()
 
-	var r0 scheduler.Connection
-	if rf, ok := ret.Get(0).(func() scheduler.Connection); ok {
+	var r0 repository.Connection
+	if rf, ok := ret.Get(0).(func() repository.Connection); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(scheduler.Connection)
+			r0 = ret.Get(0).(repository.Connection)
 		}
 	}
 

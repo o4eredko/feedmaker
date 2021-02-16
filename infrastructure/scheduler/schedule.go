@@ -1,6 +1,10 @@
 package scheduler
 
-import "time"
+import (
+	"time"
+
+	"github.com/rs/zerolog/log"
+)
 
 type (
 	Schedule struct {
@@ -31,10 +35,20 @@ func (s *Schedule) FireInterval() time.Duration {
 func (s *Schedule) Next(nowTimestamp time.Time) time.Time {
 	if !s.startTimestampExceeded {
 		s.startTimestampExceeded = true
-		return s.getAlignedStartTimestamp(nowTimestamp)
+		startTimestamp := s.getAlignedStartTimestamp(nowTimestamp)
+		log.Info().
+			Str("now", nowTimestamp.UTC().Format(time.RFC3339)).
+			Str("timestamp", startTimestamp.UTC().Format(time.RFC3339)).
+			Msg("first call of Next")
+		return startTimestamp
 	}
 
-	return s.getNextTimestamp(nowTimestamp)
+	nextTimestamp := s.getNextTimestamp(nowTimestamp)
+	log.Info().
+		Str("now", nowTimestamp.UTC().Format(time.RFC3339)).
+		Str("timestamp", nextTimestamp.UTC().Format(time.RFC3339)).
+		Msg("another one call of Next")
+	return nextTimestamp
 }
 
 func (s *Schedule) getAlignedStartTimestamp(nowTimestamp time.Time) time.Time {
@@ -42,10 +56,12 @@ func (s *Schedule) getAlignedStartTimestamp(nowTimestamp time.Time) time.Time {
 	if startTimestamp.After(nowTimestamp) {
 		return startTimestamp
 	}
-	elapsedTimeRoundedToInterval := nowTimestamp.
-		Sub(startTimestamp).
-		Round(s.fireInterval)
-	return startTimestamp.Add(elapsedTimeRoundedToInterval)
+	elapsedTimeRoundedToInterval := nowTimestamp.Sub(startTimestamp).Round(s.fireInterval)
+	startTimestamp = startTimestamp.Add(elapsedTimeRoundedToInterval)
+	if startTimestamp.Before(nowTimestamp) {
+		startTimestamp = startTimestamp.Add(s.fireInterval)
+	}
+	return startTimestamp
 }
 
 func (s *Schedule) getNextTimestamp(nowTimestamp time.Time) time.Time {
