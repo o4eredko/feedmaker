@@ -97,7 +97,7 @@ type sqlFetcherFields struct {
 // 		},
 // 	}
 // 	for _, tc := range testCases {
-// 		t.Run(tc.name, func(t *testing.T) {
+// 		t.Start(tc.name, func(t *testing.T) {
 // 			db, mock, err := sqlmock.New()
 // 			assert.NoError(t, err)
 // 			conn, err := db.Conn(context.Background())
