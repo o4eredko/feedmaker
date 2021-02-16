@@ -4,6 +4,7 @@ package mocks
 
 import (
 	context "context"
+	entity "go-feedmaker/entity"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -85,4 +86,18 @@ func (_m *FeedInteractor) ListGenerations(ctx context.Context) (interface{}, err
 	}
 
 	return r0, r1
+}
+
+// WatchGenerationsProgress provides a mock function with given fields: ctx, outStream
+func (_m *FeedInteractor) WatchGenerationsProgress(ctx context.Context, outStream chan<- *entity.Generation) error {
+	ret := _m.Called(ctx, outStream)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, chan<- *entity.Generation) error); ok {
+		r0 = rf(ctx, outStream)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }

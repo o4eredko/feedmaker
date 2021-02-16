@@ -17,3 +17,11 @@ func (h *handler) Feeds() interactor.FeedInteractor {
 func (s *APIServer) Server() *http.Server {
 	return s.server
 }
+
+func (h *wsHandler) Upgrader() Upgrader {
+	return h.upgrader
+}
+
+func (h *wsHandler) Broadcaster() Broadcaster {
+	return h.broadcaster
+}
