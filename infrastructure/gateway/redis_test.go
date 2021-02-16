@@ -24,6 +24,7 @@ func defaultRedisFields() *redisFields {
 		config: gateway.RedisConfig{
 			Host:        "localhost",
 			Port:        "5000",
+			PoolSize:    5,
 			ConnTimeout: time.Second,
 		},
 		connection: new(mocks.RedisConnection),

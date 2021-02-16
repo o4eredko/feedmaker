@@ -19,6 +19,7 @@ type (
 		Host        string
 		Port        string
 		ConnTimeout time.Duration
+		PoolSize    int
 	}
 
 	RedisDialer interface {
@@ -62,8 +63,8 @@ func (r *RedisGateway) dial() (redis.Conn, error) {
 func (r *RedisGateway) Connect() error {
 	r.pool = &redis.Pool{
 		Dial:        r.dial,
-		MaxIdle:     5,
-		MaxActive:   1,
+		MaxIdle:     r.Config.PoolSize,
+		MaxActive:   r.Config.PoolSize,
 		IdleTimeout: time.Minute,
 		Wait:        true,
 	}
