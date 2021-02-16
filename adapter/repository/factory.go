@@ -2,8 +2,6 @@ package repository
 
 import (
 	"io"
-	"io/ioutil"
-	"os"
 
 	"github.com/inhies/go-bytesize"
 
@@ -40,41 +38,20 @@ func (d *defaultFactory) CreateUploader(inStream <-chan io.ReadCloser) interacto
 }
 
 func NewDefaultFactory(
-	config FeedConfig,
+	config *FeedConfig,
 	sqlGateway SqlGateway,
 	ftpGateway FtpGateway,
 	generationType string,
 ) (interactor.FeedFactory, error) {
-	countQuery, err := readSqlFromFile(config.CountQueryFilename)
-	if err != nil {
-		return nil, err
-	}
-	selectQuery, err := readSqlFromFile(config.SelectQueryFilename)
-	if err != nil {
-		return nil, err
-	}
 	return &defaultFactory{
 		generationType: generationType,
 		fileSizeLimit:  config.FileSizeLimit,
 		fileLineLimit:  config.FileLineLimit,
-		countQuery:     countQuery,
-		selectQuery:    selectQuery,
+		countQuery:     config.CountQuery,
+		selectQuery:    config.SelectQuery,
 		sqlGateway:     sqlGateway,
 		ftpGateway:     ftpGateway,
 	}, nil
-}
-
-func readSqlFromFile(filename string) (string, error) {
-	f, err := os.Open(filename)
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
-	sql, err := ioutil.ReadAll(f)
-	if err != nil {
-		return "", err
-	}
-	return string(sql), nil
 }
 
 func NewYandexFactory() interactor.FeedFactory {

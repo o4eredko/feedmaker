@@ -24,6 +24,7 @@ var (
 )
 
 type feedFields struct {
+	config map[string]*repository.FeedConfig
 	client *mocks.RedisClient
 	conn   *mocks.Connection
 	pubsub *mocks.PubSub
@@ -33,6 +34,7 @@ type feedFields struct {
 
 func defaultFeedFields() *feedFields {
 	return &feedFields{
+		config: make(map[string]*repository.FeedConfig, 1),
 		client: new(mocks.RedisClient),
 		conn:   new(mocks.Connection),
 		pubsub: new(mocks.PubSub),
@@ -119,7 +121,7 @@ func TestFeedRepo_StoreGeneration(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			fields := defaultFeedFields()
 			tc.setupMocks(tc.args, fields)
-			feedRepo := repository.NewFeedRepo(fields.client, fields.sql, fields.ftp)
+			feedRepo := repository.NewFeedRepo(fields.config, fields.client, fields.ftp)
 
 			gotErr := feedRepo.StoreGeneration(tc.args.ctx, tc.args.generation)
 
@@ -259,7 +261,7 @@ func TestFeedRepo_ListGenerations(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			fields := defaultFeedFields()
 			tc.setupMocks(tc.args, fields)
-			feedRepo := repository.NewFeedRepo(fields.client, fields.sql, fields.ftp)
+			feedRepo := repository.NewFeedRepo(fields.config, fields.client, fields.ftp)
 
 			got, gotErr := feedRepo.ListGenerations(tc.args.ctx)
 
@@ -392,7 +394,7 @@ func TestFeedRepo_UpdateGenerationState(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			fields := defaultFeedFields()
 			tc.setupMocks(tc.args, fields)
-			feedRepo := repository.NewFeedRepo(fields.client, fields.sql, fields.ftp)
+			feedRepo := repository.NewFeedRepo(fields.config, fields.client, fields.ftp)
 
 			gotErr := feedRepo.UpdateGenerationState(tc.args.ctx, tc.args.generation)
 
@@ -443,7 +445,7 @@ func TestFeedRepo_DeleteGeneration(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			fields := defaultFeedFields()
 			tc.setupMocks(tc.args, fields)
-			feedRepo := repository.NewFeedRepo(fields.client, fields.sql, fields.ftp)
+			feedRepo := repository.NewFeedRepo(fields.config, fields.client, fields.ftp)
 
 			gotErr := feedRepo.DeleteGeneration(tc.args.ctx, tc.args.id)
 
@@ -498,7 +500,7 @@ func TestFeedRepo_CancelGeneration(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			fields := defaultFeedFields()
 			tc.setupMocks(tc.args, fields)
-			feedRepo := repository.NewFeedRepo(fields.client, fields.sql, fields.ftp)
+			feedRepo := repository.NewFeedRepo(fields.config, fields.client, fields.ftp)
 
 			gotErr := feedRepo.CancelGeneration(tc.args.ctx, tc.args.id)
 
@@ -600,7 +602,7 @@ func TestFeedRepo_OnGenerationCanceled(t *testing.T) {
 			var callbackCalled bool
 			fields := defaultFeedFields()
 			tc.setupMocks(tc.args, fields)
-			feedRepo := repository.NewFeedRepo(fields.client, fields.sql, fields.ftp)
+			feedRepo := repository.NewFeedRepo(fields.config, fields.client, fields.ftp)
 			tc.args.callback = func() {
 				callbackCalled = true
 			}
@@ -729,7 +731,7 @@ func TestFeedRepo_OnGenerationsUpdated(t *testing.T) {
 			var got *entity.Generation
 			fields := defaultFeedFields()
 			tc.setupMocks(tc.args, fields)
-			feedRepo := repository.NewFeedRepo(fields.client, fields.sql, fields.ftp)
+			feedRepo := repository.NewFeedRepo(fields.config, fields.client, fields.ftp)
 			tc.args.callback = func(g *entity.Generation) {
 				got = g
 			}

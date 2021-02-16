@@ -44,12 +44,11 @@ type (
 
 	FeedRepo interface {
 		GetFactoryByGenerationType(generationType string) (FeedFactory, error)
-		StoreGeneration(ctx context.Context, generation *entity.Generation) (*entity.Generation, error)
+		StoreGeneration(ctx context.Context, generation *entity.Generation) error
 		UpdateGenerationState(ctx context.Context, generation *entity.Generation) error
 		ListGenerations(ctx context.Context) ([]*entity.Generation, error)
-		ListAllowedTypes(ctx context.Context) ([]string, error)
-		IsAllowedType(ctx context.Context, generationType string) (bool, error)
-		IsCanceled(ctx context.Context, generationID string) (bool, error)
+		ListAllowedTypes() []string
+		IsAllowedType(generationType string) bool
 		CancelGeneration(ctx context.Context, id string) error
 		OnGenerationCanceled(ctx context.Context, id string, callback func()) error
 		OnGenerationsUpdated(ctx context.Context, callback func(*entity.Generation)) error
@@ -83,12 +82,12 @@ func (i *feedInteractor) GenerateFeed(ctx context.Context, generationType string
 	if err != nil {
 		return i.presenter.PresentErr(err)
 	}
-	generation, err := i.feeds.StoreGeneration(ctx, &entity.Generation{
+	generation := &entity.Generation{
 		ID:        uuid.New().String(),
 		Type:      generationType,
 		StartTime: time.Now(),
-	})
-	if err != nil {
+	}
+	if err := i.feeds.StoreGeneration(ctx, generation); err != nil {
 		return i.presenter.PresentErr(err)
 	}
 
@@ -211,11 +210,7 @@ func (i *feedInteractor) WatchGenerationsProgress(ctx context.Context, outStream
 }
 
 func (i *feedInteractor) ListGenerationTypes(ctx context.Context) (interface{}, error) {
-	allowedTypes, err := i.feeds.ListAllowedTypes(ctx)
-	if err != nil {
-		return nil, i.presenter.PresentErr(err)
-	}
-	return i.presenter.PresentGenerationTypes(allowedTypes), nil
+	return i.presenter.PresentGenerationTypes(i.feeds.ListAllowedTypes()), nil
 }
 
 func (i *feedInteractor) CancelGeneration(ctx context.Context, id string) error {

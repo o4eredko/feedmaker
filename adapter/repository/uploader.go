@@ -2,7 +2,9 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"io"
+	"path"
 
 	"github.com/rs/zerolog/log"
 )
@@ -10,6 +12,10 @@ import (
 type (
 	FtpGateway interface {
 		Upload(ctx context.Context, path string, r io.Reader) error
+		MakeDir(path string) error
+		RemoveDir(dir string) error
+		ChangeDir(path string) error
+		ChangeDirToParent() error
 	}
 
 	ftpUploader struct {
@@ -31,15 +37,26 @@ func NewFtpUploader(ftpGateway FtpGateway, generationType string, inStream <-cha
 }
 
 func (u *ftpUploader) UploadFiles(ctx context.Context) error {
+	if err := u.ftp.RemoveDir(u.generationType); err != nil {
+		log.Error().Err(err).Msgf("Cannot remove dir %s on ftp", u.generationType)
+	}
+	if err := u.ftp.MakeDir(u.generationType); err != nil {
+		return err
+	}
+
 	for {
 		select {
 		case file, isOpen := <-u.inStream:
 			if !isOpen {
 				return nil
 			}
-			if err := u.ftp.Upload(ctx, u.generationType, file); err != nil {
+
+			filename := fmt.Sprintf("%s_%d.csv", u.generationType, u.uploadedFilesNum)
+			filename = path.Join(u.generationType, filename)
+			if err := u.ftp.Upload(ctx, filename, file); err != nil {
 				return err
 			}
+
 			u.uploadedFilesNum++
 			u.onUpload(u.uploadedFilesNum)
 			if err := file.Close(); err != nil {

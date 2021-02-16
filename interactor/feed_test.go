@@ -104,7 +104,7 @@ func TestFeedInteractor_Generate(t *testing.T) {
 				f.feeds.On("GetFactoryByGenerationType", a.generationType).
 					Return(f.factory, nil)
 				f.feeds.On("StoreGeneration", a.ctx, mock.MatchedBy(generationMatches)).
-					Return(&generation1, nil)
+					Return(nil)
 				f.feeds.On("OnGenerationCanceled", mock.Anything, generation1.ID, mock.Anything).
 					Return(nil)
 
@@ -160,7 +160,7 @@ func TestFeedInteractor_Generate(t *testing.T) {
 				f.feeds.On("GetFactoryByGenerationType", a.generationType).
 					Return(f.factory, nil)
 				f.feeds.On("StoreGeneration", a.ctx, mock.MatchedBy(generationMatches)).
-					Return(&generation1, nil)
+					Return(nil)
 				f.feeds.On("OnGenerationCanceled", mock.Anything, generation1.ID, mock.Anything).
 					Return(nil)
 
@@ -194,7 +194,7 @@ func TestFeedInteractor_Generate(t *testing.T) {
 				f.feeds.On("GetFactoryByGenerationType", a.generationType).
 					Return(f.factory, nil)
 				f.feeds.On("StoreGeneration", a.ctx, mock.MatchedBy(generationMatches)).
-					Return(&generation1, nil)
+					Return(nil)
 				f.feeds.On("OnGenerationCanceled", mock.Anything, generation1.ID, mock.Anything).
 					Return(nil)
 
@@ -228,7 +228,7 @@ func TestFeedInteractor_Generate(t *testing.T) {
 				f.feeds.On("GetFactoryByGenerationType", a.generationType).
 					Return(f.factory, nil)
 				f.feeds.On("StoreGeneration", a.ctx, mock.MatchedBy(generationMatches)).
-					Return(&generation1, nil)
+					Return(nil)
 				f.feeds.On("OnGenerationCanceled", mock.Anything, generation1.ID, mock.Anything).
 					Return(nil)
 

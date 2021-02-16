@@ -11,11 +11,25 @@ import (
 	"go-feedmaker/infrastructure/logger"
 )
 
-type Config struct {
-	Logger logger.Config
-	Redis  gateway.RedisConfig
-	Ftp    gateway.FtpConfig
-}
+type (
+	FeedConfig struct {
+		CountQueryFilename  string `config:"count_query"`
+		SelectQueryFilename string `config:"select_query"`
+		FileSizeLimit       string `config:"size_limit"`
+		FileLineLimit       uint   `config:"line_limit"`
+		Database            struct {
+			Driver string
+			Dsn    string
+		}
+	}
+
+	Config struct {
+		Logger logger.Config
+		Redis  gateway.RedisConfig
+		Ftp    gateway.FtpConfig
+		Feeds  map[string]FeedConfig
+	}
+)
 
 func LoadFromFile(filename objectpath.Path) *Config {
 	configPath := path.Join(getPackageDir(), string(filename))

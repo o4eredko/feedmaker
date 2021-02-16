@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"math"
 
 	"github.com/rs/zerolog/log"
 )
@@ -96,8 +97,9 @@ func (s *SqlDataFetcher) validate(record []string) error {
 }
 
 func (s *SqlDataFetcher) updateProgress() {
-	if s.recordsProceeded/s.recordsCount > s.progress {
-		s.progress = s.recordsProceeded / s.recordsCount
+	progress := uint(math.Round(float64(s.recordsProceeded) / float64(s.recordsCount) * 100))
+	if progress > s.progress {
+		s.progress = progress
 		if s.onProgress != nil {
 			s.onProgress(s.progress)
 		}

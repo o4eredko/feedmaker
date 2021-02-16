@@ -16,10 +16,11 @@ import (
 
 type (
 	FeedConfig struct {
-		CountQueryFilename  string            `config:"count_query"`
-		SelectQueryFilename string            `config:"select_query"`
-		FileSizeLimit       bytesize.ByteSize `config:"size_limit"`
-		FileLineLimit       uint              `config:"line_limit"`
+		CountQuery    string
+		SelectQuery   string
+		FileSizeLimit bytesize.ByteSize
+		FileLineLimit uint
+		SqlGateway    SqlGateway
 	}
 
 	RedisClient interface {
@@ -43,18 +44,17 @@ type (
 		client         RedisClient
 		idSetName      string
 		cancelChanName string
-		typeConfigMap  map[string]FeedConfig
-		sqlGateway     SqlGateway
+		typeConfigMap  map[string]*FeedConfig
 		ftpGateway     FtpGateway
 	}
 )
 
-func NewFeedRepo(client RedisClient, sqlGateway SqlGateway, ftpGateway FtpGateway) *feedRepo {
+func NewFeedRepo(config map[string]*FeedConfig, client RedisClient, ftpGateway FtpGateway) *feedRepo {
 	return &feedRepo{
-		client:     client,
-		idSetName:  "generationIDs",
-		sqlGateway: sqlGateway,
-		ftpGateway: ftpGateway,
+		client:        client,
+		idSetName:     "generationIDs",
+		ftpGateway:    ftpGateway,
+		typeConfigMap: config,
 	}
 }
 
@@ -64,7 +64,7 @@ func (r *feedRepo) GetFactoryByGenerationType(generationType string) (interactor
 		return nil, entity.ErrInvalidGenerationType
 	}
 
-	return NewDefaultFactory(config, r.sqlGateway, r.ftpGateway, generationType)
+	return NewDefaultFactory(config, config.SqlGateway, r.ftpGateway, generationType)
 }
 
 func (r *feedRepo) ListAllowedTypes() []string {

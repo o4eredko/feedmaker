@@ -25,6 +25,11 @@ type (
 	FtpConnection interface {
 		Login(user, password string) error
 		Stor(path string, r io.Reader) error
+		MakeDir(path string) error
+		RemoveDirRecur(dir string) error
+		RemoveDir(dir string) error
+		ChangeDir(path string) error
+		ChangeDirToParent() error
 		Quit() error
 	}
 
@@ -61,6 +66,34 @@ func (f *FtpGateway) Upload(ctx context.Context, path string, r io.Reader) error
 		return ErrFtpDisconnected
 	}
 	return f.connection.Stor(path, r)
+}
+
+func (f *FtpGateway) MakeDir(dir string) error {
+	if reflect.ValueOf(f.connection).IsNil() {
+		return ErrFtpDisconnected
+	}
+	return f.connection.MakeDir(dir)
+}
+
+func (f *FtpGateway) RemoveDir(dir string) error {
+	if reflect.ValueOf(f.connection).IsNil() {
+		return ErrFtpDisconnected
+	}
+	f.connection.RemoveDirRecur(dir)
+	return f.connection.RemoveDir(dir)
+}
+
+func (f *FtpGateway) ChangeDir(dir string) error {
+	if reflect.ValueOf(f.connection).IsNil() {
+		return ErrFtpDisconnected
+	}
+	return f.connection.ChangeDir(dir)
+}
+func (f *FtpGateway) ChangeDirToParent() error {
+	if reflect.ValueOf(f.connection).IsNil() {
+		return ErrFtpDisconnected
+	}
+	return f.connection.ChangeDirToParent()
 }
 
 func (f *FtpGateway) Disconnect() error {

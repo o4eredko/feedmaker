@@ -40,7 +40,6 @@ func NewCsvFormatter(
 }
 
 func (f *CsvFormatter) FormatFiles(ctx context.Context) error {
-	defer close(f.outStream)
 	for {
 		select {
 		case record, isOpen := <-f.inStream:

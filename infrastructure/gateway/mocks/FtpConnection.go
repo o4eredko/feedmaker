@@ -13,6 +13,34 @@ type FtpConnection struct {
 	mock.Mock
 }
 
+// ChangeDir provides a mock function with given fields: path
+func (_m *FtpConnection) ChangeDir(path string) error {
+	ret := _m.Called(path)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string) error); ok {
+		r0 = rf(path)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// ChangeDirToParent provides a mock function with given fields:
+func (_m *FtpConnection) ChangeDirToParent() error {
+	ret := _m.Called()
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func() error); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // Login provides a mock function with given fields: user, password
 func (_m *FtpConnection) Login(user string, password string) error {
 	ret := _m.Called(user, password)
@@ -27,6 +55,20 @@ func (_m *FtpConnection) Login(user string, password string) error {
 	return r0
 }
 
+// MakeDir provides a mock function with given fields: path
+func (_m *FtpConnection) MakeDir(path string) error {
+	ret := _m.Called(path)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string) error); ok {
+		r0 = rf(path)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // Quit provides a mock function with given fields:
 func (_m *FtpConnection) Quit() error {
 	ret := _m.Called()
@@ -34,6 +76,34 @@ func (_m *FtpConnection) Quit() error {
 	var r0 error
 	if rf, ok := ret.Get(0).(func() error); ok {
 		r0 = rf()
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// RemoveDir provides a mock function with given fields: dir
+func (_m *FtpConnection) RemoveDir(dir string) error {
+	ret := _m.Called(dir)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string) error); ok {
+		r0 = rf(dir)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// RemoveDirRecur provides a mock function with given fields: dir
+func (_m *FtpConnection) RemoveDirRecur(dir string) error {
+	ret := _m.Called(dir)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string) error); ok {
+		r0 = rf(dir)
 	} else {
 		r0 = ret.Error(0)
 	}

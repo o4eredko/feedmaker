@@ -53,69 +53,34 @@ func (_m *FeedRepo) GetFactoryByGenerationType(generationType string) (interacto
 	return r0, r1
 }
 
-// IsAllowedType provides a mock function with given fields: ctx, generationType
-func (_m *FeedRepo) IsAllowedType(ctx context.Context, generationType string) (bool, error) {
-	ret := _m.Called(ctx, generationType)
+// IsAllowedType provides a mock function with given fields: generationType
+func (_m *FeedRepo) IsAllowedType(generationType string) bool {
+	ret := _m.Called(generationType)
 
 	var r0 bool
-	if rf, ok := ret.Get(0).(func(context.Context, string) bool); ok {
-		r0 = rf(ctx, generationType)
+	if rf, ok := ret.Get(0).(func(string) bool); ok {
+		r0 = rf(generationType)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, generationType)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
+	return r0
 }
 
-// IsCanceled provides a mock function with given fields: ctx, generationID
-func (_m *FeedRepo) IsCanceled(ctx context.Context, generationID string) (bool, error) {
-	ret := _m.Called(ctx, generationID)
-
-	var r0 bool
-	if rf, ok := ret.Get(0).(func(context.Context, string) bool); ok {
-		r0 = rf(ctx, generationID)
-	} else {
-		r0 = ret.Get(0).(bool)
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, generationID)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// ListAllowedTypes provides a mock function with given fields: ctx
-func (_m *FeedRepo) ListAllowedTypes(ctx context.Context) ([]string, error) {
-	ret := _m.Called(ctx)
+// ListAllowedTypes provides a mock function with given fields:
+func (_m *FeedRepo) ListAllowedTypes() []string {
+	ret := _m.Called()
 
 	var r0 []string
-	if rf, ok := ret.Get(0).(func(context.Context) []string); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func() []string); ok {
+		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]string)
 		}
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
+	return r0
 }
 
 // ListGenerations provides a mock function with given fields: ctx
@@ -170,26 +135,17 @@ func (_m *FeedRepo) OnGenerationsUpdated(ctx context.Context, callback func(*ent
 }
 
 // StoreGeneration provides a mock function with given fields: ctx, generation
-func (_m *FeedRepo) StoreGeneration(ctx context.Context, generation *entity.Generation) (*entity.Generation, error) {
+func (_m *FeedRepo) StoreGeneration(ctx context.Context, generation *entity.Generation) error {
 	ret := _m.Called(ctx, generation)
 
-	var r0 *entity.Generation
-	if rf, ok := ret.Get(0).(func(context.Context, *entity.Generation) *entity.Generation); ok {
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *entity.Generation) error); ok {
 		r0 = rf(ctx, generation)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*entity.Generation)
-		}
+		r0 = ret.Error(0)
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *entity.Generation) error); ok {
-		r1 = rf(ctx, generation)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
+	return r0
 }
 
 // UpdateGenerationState provides a mock function with given fields: ctx, generation

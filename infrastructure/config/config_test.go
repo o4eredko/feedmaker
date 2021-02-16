@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/tools/go/types/objectpath"
 
 	"go-feedmaker/infrastructure/config"
@@ -31,7 +32,11 @@ func TestLoadFromFile(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			testFunc := func() {
 				c := config.LoadFromFile(tc.filename)
-				assert.NotNil(t, c)
+				require.NotNil(t, c)
+				assert.NotEmpty(t, c.Logger)
+				assert.NotEmpty(t, c.Ftp)
+				assert.NotEmpty(t, c.Redis)
+				assert.NotEmpty(t, c.Feeds)
 			}
 			if tc.wantPanic {
 				assert.Panics(t, testFunc)
