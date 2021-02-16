@@ -1,10 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -106,28 +103,8 @@ func main() {
 	wsHandler := rest.NewWSHandler(upgrader, progressBroadcaster)
 
 	generationsProgress := make(chan *entity.Generation)
-	watcher := func() {
-		for generation := range generationsProgress {
-			log.Info().Interface("generation", generation).Msg("generation received")
-			buf := new(bytes.Buffer)
-			encoder := json.NewEncoder(buf)
-			generationOut := map[string]interface{}{
-				"id":             generation.ID,
-				"type":           generation.Type,
-				"progress":       fmt.Sprintf("%d%%", generation.Progress),
-				"data_fetched":   generation.DataFetched,
-				"files_uploaded": generation.FilesUploaded,
-				"start_time":     generation.StartTime.UTC().Format(time.RFC3339),
-				"end_time":       generation.EndTime.UTC().Format(time.RFC3339),
-			}
-			if err := encoder.Encode(generationOut); err != nil {
-				log.Error().Err(err).Msg("generation marshal")
-			}
-			progressBroadcaster.Broadcast(buf.Bytes())
-		}
-	}
-	go watcher()
 	go feedInteractor.WatchGenerationsProgress(context.Background(), generationsProgress)
+	go progressBroadcaster.BroadcastGenerationsProgress(generationsProgress)
 
 	router := rest.NewRouter(handler, wsHandler)
 	apiServer := rest.NewAPIServer(&conf.Api, router)

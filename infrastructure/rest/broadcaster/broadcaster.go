@@ -1,6 +1,8 @@
 package broadcaster
 
-import "github.com/rs/zerolog/log"
+import (
+	"github.com/rs/zerolog/log"
+)
 
 type (
 	broadcaster struct {
