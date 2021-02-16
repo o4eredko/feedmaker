@@ -16,9 +16,13 @@ type (
 		ListSchedules(w http.ResponseWriter, r *http.Request)
 		UnscheduleGeneration(w http.ResponseWriter, r *http.Request)
 	}
+
+	WSHandler interface {
+		ServeWS(w http.ResponseWriter, r *http.Request)
+	}
 )
 
-func NewRouter(handler Handler) http.Handler {
+func NewRouter(handler Handler, wsHandler WSHandler) http.Handler {
 	router := mux.NewRouter()
 
 	generations := router.PathPrefix("/generations").Subrouter()
@@ -30,6 +34,9 @@ func NewRouter(handler Handler) http.Handler {
 	generations.HandleFunc("/{generation-id}/schedules", handler.ScheduleGeneration).Methods(http.MethodPost)
 	generations.HandleFunc("/schedules", handler.ListSchedules).Methods(http.MethodGet)
 	generations.HandleFunc("/{generation-id}/schedules", handler.UnscheduleGeneration).Methods(http.MethodDelete)
+
+	ws := router.PathPrefix("/ws").Subrouter()
+	ws.HandleFunc("/progress", wsHandler.ServeWS)
 
 	return router
 }

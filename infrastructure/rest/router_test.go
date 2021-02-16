@@ -13,13 +13,15 @@ import (
 
 type (
 	routerFields struct {
-		handler *mocks.Handler
+		handler   *mocks.Handler
+		wsHandler *mocks.WSHandler
 	}
 )
 
 func defaultRouterFields() *routerFields {
 	return &routerFields{
-		handler: new(mocks.Handler),
+		handler:   new(mocks.Handler),
+		wsHandler: new(mocks.WSHandler),
 	}
 }
 
@@ -100,11 +102,19 @@ func TestNewRouter(t *testing.T) {
 				fields.handler.On("UnscheduleGeneration", mock.Anything, mock.Anything)
 			},
 		},
+		{
+			name:   "WS /ws/progress",
+			fields: defaultRouterFields(),
+			args:   mustMakeArgs(http.MethodGet, "/ws/progress"),
+			setupMocks: func(fields *routerFields) {
+				fields.wsHandler.On("ServeWS", mock.Anything, mock.Anything)
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.setupMocks(testCase.fields)
-			router := rest.NewRouter(testCase.fields.handler)
+			router := rest.NewRouter(testCase.fields.handler, testCase.fields.wsHandler)
 
 			router.ServeHTTP(testCase.args.responseWriter, testCase.args.request)
 
