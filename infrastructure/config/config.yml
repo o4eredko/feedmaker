@@ -15,12 +15,16 @@ ftp:
   password: "${FTP_PASSWORD}"
   conn_timeout: "1s"
 
+api:
+  host: "${API_HOST|localhost}"
+  port: "${API_PORT|8000}"
+
 feeds:
   criteo_de:
     database:
       driver: "mssql"
       dsn: "sqlserver://${WAREHOUSE_USERNAME|user}:${WAREHOUSE_PASSWORD|password}@warehouse.jo?database=Marketing"
     line_limit: 100
-    size_limit: "1000000MB"
+    size_limit: "10000MB"
     count_query: "queries/criteo_de/count.sql"
     select_query: "queries/criteo_de/select.sql"

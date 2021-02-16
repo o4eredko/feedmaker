@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/gomodule/redigo/redis"
+
+	"go-feedmaker/adapter/repository"
 )
 
 type (
@@ -15,7 +17,7 @@ type (
 	}
 
 	RedisClient interface {
-		Connection() Connection
+		Connection() repository.Connection
 	}
 
 	Connection interface {

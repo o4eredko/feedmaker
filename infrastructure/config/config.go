@@ -9,6 +9,7 @@ import (
 
 	"go-feedmaker/infrastructure/gateway"
 	"go-feedmaker/infrastructure/logger"
+	"go-feedmaker/infrastructure/rest"
 )
 
 type (
@@ -28,6 +29,7 @@ type (
 		Redis  gateway.RedisConfig
 		Ftp    gateway.FtpConfig
 		Feeds  map[string]FeedConfig
+		Api    rest.Config
 	}
 )
 

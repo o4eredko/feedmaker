@@ -44,6 +44,8 @@ func (r *recipient) OnCloseHook(hook CloseHook) {
 }
 
 func (r *recipient) Start() {
+	addr := r.conn.RemoteAddr().String()
+	log.Info().Str("addr", addr).Msg("recipient connected")
 	for {
 		select {
 		case msg := <-r.send:
@@ -52,6 +54,7 @@ func (r *recipient) Start() {
 			r.ping()
 		case <-r.stop:
 			r.stopSending()
+			log.Info().Str("addr", addr).Msg("recipient disconnected")
 			return
 		}
 	}

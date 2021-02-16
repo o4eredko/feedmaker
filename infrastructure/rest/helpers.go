@@ -21,6 +21,7 @@ func errorResponse(w http.ResponseWriter, code int, err error) {
 }
 
 func jsonResponse(w http.ResponseWriter, code int, body interface{}) {
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	encoder := json.NewEncoder(w)
 	if err := encoder.Encode(body); err != nil {
