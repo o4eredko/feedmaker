@@ -1,9 +1,5 @@
 package broadcaster
 
-import (
-	"github.com/rs/zerolog/log"
-)
-
 type (
 	broadcaster struct {
 		recipients map[Recipient]bool
@@ -32,7 +28,6 @@ func NewBroadcaster() *broadcaster {
 }
 
 func (b *broadcaster) Start() {
-	log.Info().Msg("broadcaster started")
 	for {
 		select {
 		case recipient := <-b.register:
@@ -43,7 +38,6 @@ func (b *broadcaster) Start() {
 			b.broadcastMsg(msg)
 		case <-b.stop:
 			b.stopBroadcasting()
-			log.Info().Msg("broadcaster stopped")
 			return
 		}
 	}

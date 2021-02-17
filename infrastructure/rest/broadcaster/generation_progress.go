@@ -3,7 +3,6 @@ package broadcaster
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -13,13 +12,13 @@ import (
 
 type (
 	generationOut struct {
-		ID            string `json:"id"`
-		Type          string `json:"type"`
-		Progress      string `json:"progress"`
-		DataFetched   bool   `json:"data_fetched"`
-		FilesUploaded uint   `json:"files_uploaded"`
-		StartTime     string `json:"start_time"`
-		EndTime       string `json:"end_time"`
+		ID            string  `json:"id"`
+		Type          string  `json:"type"`
+		Progress      uint    `json:"progress"`
+		DataFetched   bool    `json:"data_fetched"`
+		FilesUploaded uint    `json:"files_uploaded"`
+		StartTime     string  `json:"start_time"`
+		EndTime       *string `json:"end_time"`
 	}
 )
 
@@ -51,11 +50,18 @@ func makeGenerationOut(generation *entity.Generation) *generationOut {
 	generationOut := &generationOut{
 		ID:            generation.ID,
 		Type:          generation.Type,
-		Progress:      fmt.Sprintf("%d%%", generation.Progress),
+		Progress:      generation.Progress,
 		DataFetched:   generation.DataFetched,
 		FilesUploaded: generation.FilesUploaded,
-		StartTime:     generation.StartTime.UTC().Format(time.RFC3339),
-		EndTime:       generation.EndTime.UTC().Format(time.RFC3339),
+		StartTime:     formatTime(generation.StartTime),
+	}
+	if !generation.EndTime.IsZero() {
+		endTime := formatTime(generation.EndTime)
+		generationOut.EndTime = &endTime
 	}
 	return generationOut
+}
+
+func formatTime(t time.Time) string {
+	return t.UTC().Format(time.RFC3339)
 }
