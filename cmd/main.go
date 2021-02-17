@@ -37,8 +37,6 @@ func (r *redisDialer) Dial(network, addr string, options ...redis.DialOption) (g
 }
 
 func (f *ftpDialer) DialTimeout(addr string, timeout time.Duration) (gateway.FtpConnection, error) {
-	// ftp.ServerConn{}.RemoveDirRecur()
-	// ftp.StatusDirectory
 	return ftp.DialTimeout(addr, timeout)
 }
 
