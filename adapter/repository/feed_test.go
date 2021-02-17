@@ -44,9 +44,9 @@ func defaultFeedFields() *feedFields {
 }
 
 func (f *feedFields) assertExpectations(t *testing.T) {
-	f.client.AssertExpectations(t)
-	f.conn.AssertExpectations(t)
-	f.pubsub.AssertExpectations(t)
+	assert.True(t, f.client.AssertExpectations(t))
+	assert.True(t, f.conn.AssertExpectations(t))
+	assert.True(t, f.pubsub.AssertExpectations(t))
 }
 
 func TestFeedRepo_StoreGeneration(t *testing.T) {
@@ -695,15 +695,20 @@ func TestFeedRepo_OnGenerationsUpdated(t *testing.T) {
 			},
 			setupMocks: func(a *args, f *feedFields) {
 				channel := "generation.updated"
+				f.client.On("Connection").Return(f.conn).Maybe()
 				f.client.On("PubSub").Return(f.pubsub)
 				f.pubsub.On("Subscribe", channel).Return(nil)
 
 				f.pubsub.On("Receive").
 					Return(redis.Message{Channel: channel, Data: []byte("1")}).
 					After(time.Second).Maybe()
+				f.conn.On("Do", "HGETALL", "1").Return([]interface{}{
+					[]byte("type"), []byte("test"),
+				}, nil).Maybe()
 
 				f.pubsub.On("Unsubscribe", channel).Return(nil)
 				f.pubsub.On("Close").Return(nil)
+				f.conn.On("Close").Return(nil).Maybe()
 			},
 			wantErr: context.DeadlineExceeded,
 		},

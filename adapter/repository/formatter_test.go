@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/inhies/go-bytesize"
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 
 	"go-feedmaker/adapter/repository"
@@ -30,18 +31,17 @@ type (
 
 func TestCsvFormatter_FormatFiles(t *testing.T) {
 	testCases := []struct {
-		name          string
-		fields        *fields
-		ctx           context.Context
-		records       []record
-		inStreamDelay time.Duration
-		wantErr       error
+		name    string
+		fields  *fields
+		ctx     context.Context
+		records []record
+		wantErr error
 	}{
 		{
 			name: "line limit checked",
 			fields: &fields{
 				sizeLimit: bytesize.MB,
-				lineLimit: 10,
+				lineLimit: 3,
 				inStream:  make(chan []string),
 				outStream: make(chan io.ReadCloser),
 			},
@@ -131,11 +131,12 @@ func TestCsvFormatter_FormatFiles(t *testing.T) {
 			)
 
 			var wg sync.WaitGroup
+			wg.Add(2)
 			produceRecordsCtx, cancelProducing := context.WithCancel(context.Background())
 			defer cancelProducing()
 			go func() {
-				wg.Add(1)
 				defer wg.Done()
+				defer close(tc.fields.outStream)
 				gotErr := formatter.FormatFiles(tc.ctx)
 				if gotErr != nil {
 					cancelProducing()
@@ -143,8 +144,8 @@ func TestCsvFormatter_FormatFiles(t *testing.T) {
 				assert.Equal(t, tc.wantErr, gotErr)
 			}()
 			go func() {
-				wg.Add(1)
 				defer wg.Done()
+				defer close(tc.fields.inStream)
 				produceRecords(produceRecordsCtx, tc.fields.inStream, tc.records)
 			}()
 
@@ -164,26 +165,23 @@ func TestCsvFormatter_FormatFiles(t *testing.T) {
 				assert.LessOrEqual(t, fileSize, int(tc.fields.sizeLimit))
 				assert.NoError(t, file.Close())
 			}
+			log.Info().Msgf("XYI")
 			wg.Wait()
 		})
 	}
 }
 
 func produceRecords(ctx context.Context, stream chan<- []string, records []record) {
-	defer close(stream)
 	if len(records) == 0 {
 		return
 	}
 	var idx int
-	for {
+	for idx < len(records) {
 		select {
 		case <-ctx.Done():
 			return
 		case stream <- records[idx].in:
 			idx++
-			if idx == len(records) {
-				return
-			}
 		default:
 			time.Sleep(time.Millisecond)
 		}

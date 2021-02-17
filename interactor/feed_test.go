@@ -105,7 +105,7 @@ func TestFeedInteractor_Generate(t *testing.T) {
 					Return(f.factory, nil)
 				f.feeds.On("StoreGeneration", a.ctx, mock.MatchedBy(generationMatches)).
 					Return(nil)
-				f.feeds.On("OnGenerationCanceled", mock.Anything, generation1.ID, mock.Anything).
+				f.feeds.On("OnGenerationCanceled", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 
 				f.factory.On("CreateDataFetcher", mock.Anything).Return(f.dataFetcher)
@@ -140,10 +140,8 @@ func TestFeedInteractor_Generate(t *testing.T) {
 					timeIsAlmostEqual := g.StartTime.Sub(time.Now()) < time.Second
 					return g.Progress == 0 && timeIsAlmostEqual && g.Type == a.generationType && len(g.ID) > 0
 				}
-				f.feeds.On("GetFactoryByGenerationType", a.generationType).
-					Return(f.factory, nil)
-				f.feeds.On("StoreGeneration", a.ctx, mock.MatchedBy(generationMatches)).
-					Return(nil, defaultErr)
+				f.feeds.On("GetFactoryByGenerationType", a.generationType).Return(f.factory, nil)
+				f.feeds.On("StoreGeneration", a.ctx, mock.MatchedBy(generationMatches)).Return(defaultErr)
 				f.presenter.On("PresentErr", mock.Anything).Return(errPassThrough)
 			},
 			wantErr: defaultErr,
@@ -161,7 +159,7 @@ func TestFeedInteractor_Generate(t *testing.T) {
 					Return(f.factory, nil)
 				f.feeds.On("StoreGeneration", a.ctx, mock.MatchedBy(generationMatches)).
 					Return(nil)
-				f.feeds.On("OnGenerationCanceled", mock.Anything, generation1.ID, mock.Anything).
+				f.feeds.On("OnGenerationCanceled", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 
 				f.factory.On("CreateDataFetcher", mock.Anything).Return(f.dataFetcher)
@@ -195,7 +193,7 @@ func TestFeedInteractor_Generate(t *testing.T) {
 					Return(f.factory, nil)
 				f.feeds.On("StoreGeneration", a.ctx, mock.MatchedBy(generationMatches)).
 					Return(nil)
-				f.feeds.On("OnGenerationCanceled", mock.Anything, generation1.ID, mock.Anything).
+				f.feeds.On("OnGenerationCanceled", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 
 				f.factory.On("CreateDataFetcher", mock.Anything).Return(f.dataFetcher)
@@ -229,7 +227,7 @@ func TestFeedInteractor_Generate(t *testing.T) {
 					Return(f.factory, nil)
 				f.feeds.On("StoreGeneration", a.ctx, mock.MatchedBy(generationMatches)).
 					Return(nil)
-				f.feeds.On("OnGenerationCanceled", mock.Anything, generation1.ID, mock.Anything).
+				f.feeds.On("OnGenerationCanceled", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 
 				f.factory.On("CreateDataFetcher", mock.Anything).Return(f.dataFetcher)
@@ -276,24 +274,13 @@ func TestListGenerationTypes(t *testing.T) {
 		{
 			name: "succeed",
 			setupMocks: func(f *fields) {
-				f.feeds.
-					On("ListAllowedTypes", mock.Anything).
-					Return([]string{"a", "b"}, nil)
-				f.presenter.
-					On("PresentGenerationTypes", mock.Anything).
+				f.feeds.On("ListAllowedTypes", mock.Anything).Return([]string{"a", "b"})
+				f.presenter.On("PresentGenerationTypes", mock.Anything).
 					Return(func(in []string) interface{} {
 						return in
 					})
 			},
 			want: []string{"a", "b"},
-		},
-		{
-			name: "feeds.ListAllowedTypes error",
-			setupMocks: func(f *fields) {
-				f.feeds.On("ListAllowedTypes", mock.Anything).Return(nil, defaultErr)
-				f.presenter.On("PresentErr", mock.Anything).Return(errPassThrough)
-			},
-			wantErr: defaultErr,
 		},
 	}
 
