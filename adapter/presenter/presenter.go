@@ -1,7 +1,6 @@
 package presenter
 
 import (
-	"fmt"
 	"time"
 
 	"go-feedmaker/interactor"
@@ -13,7 +12,7 @@ type (
 	generationOut struct {
 		ID            string  `json:"id"`
 		Type          string  `json:"type"`
-		Progress      string  `json:"progress"`
+		Progress      uint    `json:"progress"`
 		DataFetched   bool    `json:"data_fetched"`
 		FilesUploaded uint    `json:"files_uploaded"`
 		StartTime     string  `json:"start_time"`
@@ -42,14 +41,18 @@ func makeGenerationOut(generation *interactor.GenerationsOut) *generationOut {
 	generationOut := &generationOut{
 		ID:            generation.ID,
 		Type:          generation.Type,
-		Progress:      fmt.Sprintf("%d%%", generation.Progress),
+		Progress:      generation.Progress,
 		DataFetched:   generation.DataFetched,
 		FilesUploaded: generation.FilesUploaded,
-		StartTime:     generation.StartTime.UTC().Format(time.RFC3339),
+		StartTime:     formatTime(generation.StartTime),
 	}
 	if !generation.EndTime.IsZero() {
-		endTime := generation.EndTime.UTC().Format(time.RFC3339)
+		endTime := formatTime(generation.EndTime)
 		generationOut.EndTime = &endTime
 	}
 	return generationOut
+}
+
+func formatTime(t time.Time) string {
+	return t.UTC().Format(time.RFC3339)
 }
