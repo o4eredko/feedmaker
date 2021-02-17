@@ -19,7 +19,7 @@ services:
     env_file:
       - ".env"
     environment:
-      CACHE_HOST: "job_salary_redis"
+      REDIS_HOST: "feedmaker_v2_redis"
     volumes:
       - "./infrastructure/config/config.yml:/app/infrastructure/config/config.yml"
       - "./queries:/app/queries"
