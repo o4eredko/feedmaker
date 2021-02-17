@@ -55,7 +55,7 @@ func (h *handler) GenerateFeed(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, http.StatusBadRequest, err)
 		return
 	}
-	if err := h.feeds.GenerateFeed(r.Context(), generationType); err != nil {
+	if err := h.feeds.GenerateFeed(context.Background(), generationType); err != nil {
 		errorResponse(w, http.StatusInternalServerError, err)
 		return
 	}
