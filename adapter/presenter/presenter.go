@@ -11,13 +11,13 @@ type (
 	Presenter struct{}
 
 	generationOut struct {
-		ID            string `json:"id"`
-		Type          string `json:"type"`
-		Progress      string `json:"progress"`
-		DataFetched   bool   `json:"data_fetched"`
-		FilesUploaded uint   `json:"files_uploaded"`
-		StartTime     string `json:"start_time"`
-		EndTime       string `json:"end_time"`
+		ID            string  `json:"id"`
+		Type          string  `json:"type"`
+		Progress      string  `json:"progress"`
+		DataFetched   bool    `json:"data_fetched"`
+		FilesUploaded uint    `json:"files_uploaded"`
+		StartTime     string  `json:"start_time"`
+		EndTime       *string `json:"end_time"`
 	}
 )
 
@@ -46,7 +46,10 @@ func makeGenerationOut(generation *interactor.GenerationsOut) *generationOut {
 		DataFetched:   generation.DataFetched,
 		FilesUploaded: generation.FilesUploaded,
 		StartTime:     generation.StartTime.UTC().Format(time.RFC3339),
-		EndTime:       generation.EndTime.UTC().Format(time.RFC3339),
+	}
+	if !generation.EndTime.IsZero() {
+		endTime := generation.EndTime.UTC().Format(time.RFC3339)
+		generationOut.EndTime = &endTime
 	}
 	return generationOut
 }
