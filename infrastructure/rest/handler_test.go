@@ -178,7 +178,7 @@ func Test_handler_GenerateFeed(t *testing.T) {
 			fields: defaultHandlerFields(),
 			setupMocks: func(fields *handlerFields, args *args) {
 				fields.feeds.
-					On("GenerateFeed", args.r.Context(), args.generationType).
+					On("GenerateFeed", mock.Anything, args.generationType).
 					Return(nil)
 			},
 			args:           defaultArgs("foobar"),
@@ -189,7 +189,7 @@ func Test_handler_GenerateFeed(t *testing.T) {
 			fields: defaultHandlerFields(),
 			setupMocks: func(fields *handlerFields, args *args) {
 				fields.feeds.
-					On("GenerateFeed", args.r.Context(), args.generationType).
+					On("GenerateFeed", mock.Anything, args.generationType).
 					Return(defaultTestErr)
 			},
 			args:           defaultArgs("foobar"),
@@ -423,7 +423,7 @@ func Test_handler_ListSchedules(t *testing.T) {
 					Return(defaultTaskSchedules, nil)
 			},
 			wantStatusCode: http.StatusCreated,
-			wantBody:       mustMarshal(defaultTaskSchedules),
+			wantBody:       mustMarshal(rest.MakeSchedulesOut(defaultTaskSchedules)),
 		},
 		{
 			name:   "error in scheduler.ListSchedules",

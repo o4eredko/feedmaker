@@ -22,9 +22,12 @@ var (
 	defaultTestErr    = errors.New("default test error")
 	defaultScheduleIn = rest.ScheduleTaskIn{
 		StartTimestamp: time.Now().UTC().Add(time.Hour * 13),
-		DelayInterval:  time.Minute * 42,
+		DelayInterval:  42,
 	}
 	defaultTaskSchedules = map[scheduler.TaskID]*scheduler.Schedule{
+		"foobar": {}, "spam": {}, "ham": {}, "eggs": {}, "0xDEADBEEF": {},
+	}
+	defaultTaskSchedulesOut = map[scheduler.TaskID]*rest.ScheduleOut{
 		"foobar": {}, "spam": {}, "ham": {}, "eggs": {}, "0xDEADBEEF": {},
 	}
 )
