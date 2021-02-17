@@ -92,6 +92,9 @@ func main() {
 	taskScheduler := scheduler.New(cron.New(), scheduleSaver)
 	taskScheduler.Start()
 	defer taskScheduler.Stop()
+	if err := taskScheduler.ScheduleAllSavedGenerations(feedInteractor); err != nil {
+		log.Fatal().Err(err).Msg("can't schedule saved generations")
+	}
 	handler := rest.NewHandler(feedInteractor, taskScheduler)
 
 	upgrader := &websocket.Upgrader{
