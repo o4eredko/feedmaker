@@ -90,7 +90,7 @@ func (i *feedInteractor) GenerateFeed(ctx context.Context, generationType string
 	if err := i.feeds.StoreGeneration(ctx, generation); err != nil {
 		return i.presenter.PresentErr(err)
 	}
-
+	log.Info().Msgf("Started generation %s with id %s", generation.Type, generation.ID)
 	ctx, cancelCtx := context.WithCancel(ctx)
 	defer cancelCtx()
 	go i.onGenerationCanceled(ctx, generation.ID, cancelCtx)
@@ -136,6 +136,7 @@ func (i *feedInteractor) GenerateFeed(ctx context.Context, generationType string
 		cancelCtx()
 		return i.presenter.PresentErr(err)
 	}
+	log.Info().Msgf("Finished generation %s with id %s", generation.Type, generation.ID)
 	return nil
 }
 
