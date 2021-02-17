@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/rs/zerolog/log"
@@ -54,15 +55,15 @@ func extractFromURL(r *http.Request, key string) (string, error) {
 func makeSchedulesOut(schedules map[scheduler.TaskID]*scheduler.Schedule) map[scheduler.TaskID]*scheduleOut {
 	schedulesOut := make(map[scheduler.TaskID]*scheduleOut, len(schedules))
 	for taskID, schedule := range schedules {
-		scheduleOut := makeScheduleOut(taskID, schedule)
+		scheduleOut := makeScheduleOut(schedule)
 		schedulesOut[taskID] = scheduleOut
 	}
 	return schedulesOut
 }
 
-func makeScheduleOut(taskID scheduler.TaskID, schedule *scheduler.Schedule) *scheduleOut {
+func makeScheduleOut(schedule *scheduler.Schedule) *scheduleOut {
 	return &scheduleOut{
-		StartTimestamp: schedule.StartTimestamp(),
-		DelayInterval:  schedule.FireInterval(),
+		StartTimestamp: schedule.StartTimestamp().Format(time.RFC3339),
+		DelayInterval:  int(schedule.FireInterval().Seconds()),
 	}
 }

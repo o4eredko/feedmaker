@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"go-feedmaker/infrastructure/scheduler"
 	"go-feedmaker/interactor"
@@ -131,7 +132,7 @@ func (h *handler) makeTask(generationType string, scheduleIn *scheduleTaskIn) (*
 	if err != nil {
 		return nil, err
 	}
-	schedule := scheduler.NewSchedule(scheduleIn.StartTimestamp, scheduleIn.DelayInterval)
+	schedule := scheduler.NewSchedule(scheduleIn.StartTimestamp, time.Second*time.Duration(scheduleIn.DelayInterval))
 	taskToSchedule := scheduler.NewTask(cmd, schedule)
 	return taskToSchedule, nil
 }
