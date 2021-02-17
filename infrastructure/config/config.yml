@@ -1,6 +1,6 @@
 logger:
-  level: debug
-  json_output: false
+  level: info
+  json_output: true
 
 redis:
   host: "${REDIS_HOST|localhost}"

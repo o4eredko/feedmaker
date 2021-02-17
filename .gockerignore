@@ -1,0 +1,9 @@
+# IDE dirs
+.idea
+.vs
+
+# Git dir
+.git
+
+# Persistent layer dirs
+.data
