@@ -3,6 +3,7 @@ package rest
 import (
 	"net/http"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
 
@@ -38,5 +39,9 @@ func NewRouter(handler Handler, wsHandler WSHandler) http.Handler {
 	ws := router.PathPrefix("/ws").Subrouter()
 	ws.HandleFunc("/progress", wsHandler.ServeWS)
 
-	return router
+	headersOK := handlers.AllowedHeaders([]string{"Accept", "Content-Type", "Authorization"})
+	originsOK := handlers.AllowedOrigins([]string{"*"})
+	methodsOK := handlers.AllowedMethods([]string{"GET", "POST", "OPTIONS", "DELETE", "PUT"})
+
+	return handlers.CORS(headersOK, originsOK, methodsOK)(router)
 }
