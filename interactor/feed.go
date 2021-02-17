@@ -189,11 +189,13 @@ func makeListGenerationsOut(generations []*entity.Generation) *ListGenerationsOu
 	out := ListGenerationsOut{}
 	for _, generation := range generations {
 		out = append(out, &GenerationsOut{
-			ID:        generation.ID,
-			Type:      generation.Type,
-			Progress:  generation.Progress,
-			StartTime: generation.StartTime,
-			EndTime:   generation.EndTime,
+			ID:            generation.ID,
+			Type:          generation.Type,
+			Progress:      generation.Progress,
+			DataFetched:   generation.DataFetched,
+			FilesUploaded: generation.FilesUploaded,
+			StartTime:     generation.StartTime,
+			EndTime:       generation.EndTime,
 		})
 	}
 	return &out
