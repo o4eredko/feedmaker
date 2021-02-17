@@ -1,6 +1,11 @@
 package broadcaster
 
-import "time"
+import (
+	"io"
+	"time"
+
+	"go-feedmaker/entity"
+)
 
 type (
 	RecipientImpl   = recipient
@@ -77,4 +82,8 @@ func (b *broadcaster) GetStop() chan struct{} {
 
 func (b *broadcaster) SetStop(stop chan struct{}) {
 	b.stop = stop
+}
+
+func MarshalGeneration(generation *entity.Generation, w io.Writer) error {
+	return marshalGeneration(generation, w)
 }

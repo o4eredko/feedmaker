@@ -22,10 +22,6 @@ type (
 	}
 )
 
-var (
-	defaultMessage = []byte("default message")
-)
-
 func (f *recipientFields) AssertExpectations(t *testing.T) {
 	f.conn.AssertExpectations(t)
 	f.closeHook.AssertExpectations(t)

@@ -3,6 +3,7 @@ package broadcaster
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -40,9 +41,9 @@ func (b *broadcaster) broadcastGeneration(generation *entity.Generation) {
 	b.Broadcast(buf.Bytes())
 }
 
-func marshalGeneration(generation *entity.Generation, buf *bytes.Buffer) error {
+func marshalGeneration(generation *entity.Generation, w io.Writer) error {
 	generationOut := makeGenerationOut(generation)
-	encoder := json.NewEncoder(buf)
+	encoder := json.NewEncoder(w)
 	return encoder.Encode(generationOut)
 }
 
