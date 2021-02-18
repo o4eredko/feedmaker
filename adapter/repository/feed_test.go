@@ -159,6 +159,7 @@ func TestFeedRepo_ListGenerations(t *testing.T) {
 						[]byte("progress"), []byte("100"),
 						[]byte("files_uploaded"), []byte("4"),
 						[]byte("data_fetched"), []byte("1"),
+						[]byte("is_canceled"), []byte("1"),
 						[]byte("start_time"), []byte(strconv.Itoa(int(time.Unix(1, 0).Unix()))),
 					}, nil)
 				f.conn.
@@ -178,6 +179,7 @@ func TestFeedRepo_ListGenerations(t *testing.T) {
 					Progress:      100,
 					FilesUploaded: 4,
 					DataFetched:   true,
+					IsCanceled:    true,
 					StartTime:     time.Unix(1, 0),
 				},
 				{
@@ -475,13 +477,14 @@ func TestFeedRepo_CancelGeneration(t *testing.T) {
 			setupMocks: func(a *args, f *feedFields) {
 				f.client.On("Connection").Return(f.conn)
 				f.conn.On("Close").Return(nil)
+				f.conn.On("Do", "HSET", a.id, "is_canceled", true).Return("", nil)
 				f.conn.
 					On("Do", "PUBLISH", fmt.Sprintf("%s.canceled", a.id), mock.Anything).
 					Return("", nil)
 			},
 		},
 		{
-			name: "Do error",
+			name: "HSET error",
 			args: &args{
 				ctx: context.Background(),
 				id:  uuid.NewString(),
@@ -489,6 +492,20 @@ func TestFeedRepo_CancelGeneration(t *testing.T) {
 			setupMocks: func(a *args, f *feedFields) {
 				f.client.On("Connection").Return(f.conn)
 				f.conn.On("Close").Return(nil)
+				f.conn.On("Do", "HSET", a.id, "is_canceled", true).Return("", defaultErr)
+			},
+			wantErr: defaultErr,
+		},
+		{
+			name: "Publish error",
+			args: &args{
+				ctx: context.Background(),
+				id:  uuid.NewString(),
+			},
+			setupMocks: func(a *args, f *feedFields) {
+				f.client.On("Connection").Return(f.conn)
+				f.conn.On("Close").Return(nil)
+				f.conn.On("Do", "HSET", a.id, "is_canceled", true).Return("", nil)
 				f.conn.
 					On("Do", "PUBLISH", fmt.Sprintf("%s.canceled", a.id), mock.Anything).
 					Return("", defaultErr)

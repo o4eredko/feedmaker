@@ -220,15 +220,7 @@ func (i *feedInteractor) ListGenerations(ctx context.Context) (interface{}, erro
 func makeListGenerationsOut(generations []*entity.Generation) *ListGenerationsOut {
 	out := ListGenerationsOut{}
 	for _, generation := range generations {
-		out = append(out, &GenerationsOut{
-			ID:            generation.ID,
-			Type:          generation.Type,
-			Progress:      generation.Progress,
-			DataFetched:   generation.DataFetched,
-			FilesUploaded: generation.FilesUploaded,
-			StartTime:     generation.StartTime,
-			EndTime:       generation.EndTime,
-		})
+		out = append(out, (*GenerationsOut)(generation))
 	}
 	return &out
 }

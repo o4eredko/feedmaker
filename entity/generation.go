@@ -8,6 +8,7 @@ type Generation struct {
 	Progress      uint
 	DataFetched   bool
 	FilesUploaded uint
+	IsCanceled    bool
 	StartTime     time.Time
 	EndTime       time.Time
 }

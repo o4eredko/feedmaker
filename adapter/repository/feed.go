@@ -138,12 +138,14 @@ func makeGenerationFromRedisValues(v map[string]string) (*entity.Generation, err
 	progress, _ := strconv.ParseUint(v["progress"], 10, 32)
 	filesUploaded, _ := strconv.ParseUint(v["files_uploaded"], 10, 32)
 	dataFetched, _ := strconv.ParseBool(v["data_fetched"])
+	isCanceled, _ := strconv.ParseBool(v["is_canceled"])
 
 	generation := new(entity.Generation)
 	generation.ID = v["id"]
 	generation.Type = v["type"]
 	generation.Progress = uint(progress)
 	generation.DataFetched = dataFetched
+	generation.IsCanceled = isCanceled
 	generation.FilesUploaded = uint(filesUploaded)
 
 	if timestamp, ok := v["start_time"]; ok && len(timestamp) > 0 {
@@ -197,6 +199,9 @@ func (r *feedRepo) DeleteGeneration(ctx context.Context, generationID string) er
 func (r *feedRepo) CancelGeneration(ctx context.Context, id string) error {
 	conn := r.client.Connection()
 	defer conn.Close()
+	if _, err := conn.Do("HSET", id, "is_canceled", true); err != nil {
+		return err
+	}
 	channel := fmt.Sprintf("%s.canceled", id)
 	_, err := conn.Do("PUBLISH", channel, "1")
 	return err
