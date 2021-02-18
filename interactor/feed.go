@@ -125,7 +125,7 @@ func (i *feedInteractor) generateFeed(ctx context.Context, factory FeedFactory, 
 
 	ctx, cancelCtx := context.WithCancel(ctx)
 	defer cancelCtx()
-	go i.onGenerationCanceled(ctx, generation.ID, cancelCtx)
+	go i.onGenerationCanceled(ctx, generation, cancelCtx)
 	errStream := make(chan error)
 	recordStream := make(chan []string)
 	fileStream := make(chan io.ReadCloser)
@@ -201,11 +201,19 @@ func (i *feedInteractor) onDataFetched(generation *entity.Generation) func() {
 	}
 }
 
-func (i *feedInteractor) onGenerationCanceled(ctx context.Context, generationID string, callback func()) {
-	err := i.feeds.OnGenerationCanceled(ctx, generationID, callback)
+func (i *feedInteractor) onGenerationCanceled(ctx context.Context, generation *entity.Generation, callback func()) {
+	handleCancel := func() {
+		callback()
+		generation.IsCanceled = true
+		if err := i.feeds.UpdateGenerationState(context.Background(), generation); err != nil {
+			log.Error().Err(err).
+				Msgf("Cannot update IsCanceled for %s", generation.ID)
+		}
+	}
+	err := i.feeds.OnGenerationCanceled(ctx, generation.ID, handleCancel)
 	if err != nil {
 		log.Error().Err(err).
-			Msgf("Cannot check if generation with id %s canceled", generationID)
+			Msgf("Cannot check if generation with id %s canceled", generation.ID)
 	}
 }
 
