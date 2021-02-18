@@ -59,14 +59,14 @@ func TestScheduleWithSpecificStartTimestamp_Next(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			s := scheduler.NewSchedule(
-				testCase.fields.startTimestamp,
-				testCase.fields.delayInterval,
-			)
+			s := scheduler.NewSchedule(testCase.fields.startTimestamp, testCase.fields.delayInterval)
 
 			nowTimestamp := getNowTimestamp()
-			elapsed := nowTimestamp.Sub(testCase.fields.startTimestamp)
-			expectedStartAt := testCase.fields.startTimestamp.Add(elapsed.Round(testCase.fields.delayInterval))
+			elapsedTimeRoundedToInterval := nowTimestamp.Sub(testCase.fields.startTimestamp).Round(testCase.fields.delayInterval)
+			expectedStartAt := testCase.fields.startTimestamp.Add(elapsedTimeRoundedToInterval)
+			if expectedStartAt.Before(nowTimestamp) {
+				expectedStartAt = expectedStartAt.Add(testCase.fields.delayInterval)
+			}
 			gotStartAt := s.Next(nowTimestamp)
 			assert.Equal(t, expectedStartAt, gotStartAt)
 

@@ -304,6 +304,7 @@ func TestFeedRepo_UpdateGenerationState(t *testing.T) {
 					Add("HSET", a.generation.ID).
 					Add(mock.Anything, a.generation.Progress).
 					Add(mock.Anything, a.generation.DataFetched).
+					Add(mock.Anything, a.generation.IsCanceled).
 					Add(mock.Anything, a.generation.FilesUploaded).
 					Add(mock.Anything, a.generation.EndTime.Unix())
 				f.conn.On("Do", args...).Return("", nil)
@@ -331,6 +332,7 @@ func TestFeedRepo_UpdateGenerationState(t *testing.T) {
 					Add("HSET", a.generation.ID).
 					Add(mock.Anything, a.generation.Progress).
 					Add(mock.Anything, a.generation.DataFetched).
+					Add(mock.Anything, a.generation.IsCanceled).
 					Add(mock.Anything, a.generation.FilesUploaded)
 				f.conn.On("Do", args...).Return("", nil)
 
@@ -357,6 +359,7 @@ func TestFeedRepo_UpdateGenerationState(t *testing.T) {
 					Add("HSET", a.generation.ID).
 					Add(mock.Anything, a.generation.Progress).
 					Add(mock.Anything, a.generation.DataFetched).
+					Add(mock.Anything, a.generation.IsCanceled).
 					Add(mock.Anything, a.generation.FilesUploaded).
 					Add(mock.Anything, a.generation.EndTime.Unix())
 				f.conn.On("Do", args...).Return("", defaultErr)
@@ -382,6 +385,7 @@ func TestFeedRepo_UpdateGenerationState(t *testing.T) {
 					Add("HSET", a.generation.ID).
 					Add(mock.Anything, a.generation.Progress).
 					Add(mock.Anything, a.generation.DataFetched).
+					Add(mock.Anything, a.generation.IsCanceled).
 					Add(mock.Anything, a.generation.FilesUploaded).
 					Add(mock.Anything, a.generation.EndTime.Unix())
 				f.conn.On("Do", args...).Return("", nil)
