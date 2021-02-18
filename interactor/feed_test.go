@@ -293,6 +293,7 @@ func TestFeedInteractor_RestartGeneration(t *testing.T) {
 						Progress:      43,
 						DataFetched:   true,
 						FilesUploaded: 1,
+						IsCanceled:    true,
 						StartTime:     time.Unix(10, 0),
 					}, nil)
 				f.feeds.On("GetFactoryByGenerationType", "test").Return(f.factory, nil)
@@ -302,6 +303,7 @@ func TestFeedInteractor_RestartGeneration(t *testing.T) {
 					Progress:      0,
 					DataFetched:   false,
 					FilesUploaded: 0,
+					IsCanceled:    false,
 					StartTime:     time.Unix(10, 0),
 				}).Return(nil)
 				f.feeds.On("OnGenerationCanceled", mock.Anything, mock.Anything, mock.Anything).Return(nil)
