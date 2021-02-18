@@ -18,6 +18,7 @@ type (
 		Progress      uint    `json:"progress"`
 		DataFetched   bool    `json:"data_fetched"`
 		FilesUploaded uint    `json:"files_uploaded"`
+		IsCanceled    bool    `json:"is_canceled"`
 		StartTime     string  `json:"start_time"`
 		EndTime       *string `json:"end_time"`
 	}
@@ -54,6 +55,7 @@ func makeGenerationOut(generation *entity.Generation) *generationOut {
 		Progress:      generation.Progress,
 		DataFetched:   generation.DataFetched,
 		FilesUploaded: generation.FilesUploaded,
+		IsCanceled:    generation.IsCanceled,
 		StartTime:     formatTime(generation.StartTime),
 	}
 	if !generation.EndTime.IsZero() {
