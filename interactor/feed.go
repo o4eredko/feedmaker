@@ -15,6 +15,7 @@ import (
 type (
 	FeedInteractor interface {
 		GenerateFeed(ctx context.Context, generationType string) error
+		RestartGeneration(ctx context.Context, generationID string) error
 		ListGenerations(ctx context.Context) (interface{}, error)
 		ListGenerationTypes(ctx context.Context) (interface{}, error)
 		CancelGeneration(ctx context.Context, id string) error
@@ -45,6 +46,7 @@ type (
 	FeedRepo interface {
 		GetFactoryByGenerationType(generationType string) (FeedFactory, error)
 		StoreGeneration(ctx context.Context, generation *entity.Generation) error
+		GetGeneration(ctx context.Context, generationID string) (*entity.Generation, error)
 		UpdateGenerationState(ctx context.Context, generation *entity.Generation) error
 		ListGenerations(ctx context.Context) ([]*entity.Generation, error)
 		ListAllowedTypes() []string
@@ -90,7 +92,37 @@ func (i *feedInteractor) GenerateFeed(ctx context.Context, generationType string
 	if err := i.feeds.StoreGeneration(ctx, generation); err != nil {
 		return i.presenter.PresentErr(err)
 	}
+	if err := i.generateFeed(ctx, factory, generation); err != nil {
+		return i.presenter.PresentErr(err)
+	}
+	return nil
+}
+
+func (i *feedInteractor) RestartGeneration(ctx context.Context, generationID string) error {
+	generation, err := i.feeds.GetGeneration(ctx, generationID)
+	if err != nil {
+		return i.presenter.PresentErr(err)
+	}
+	factory, err := i.feeds.GetFactoryByGenerationType(generation.Type)
+	if err != nil {
+		return i.presenter.PresentErr(err)
+	}
+	generation.DataFetched = false
+	generation.FilesUploaded = 0
+	generation.Progress = 0
+	if err := i.feeds.UpdateGenerationState(ctx, generation); err != nil {
+		return i.presenter.PresentErr(err)
+	}
+	if err := i.generateFeed(ctx, factory, generation); err != nil {
+		return i.presenter.PresentErr(err)
+	}
+	return nil
+}
+
+func (i *feedInteractor) generateFeed(ctx context.Context, factory FeedFactory, generation *entity.Generation) error {
 	log.Info().Msgf("Started generation %s with id %s", generation.Type, generation.ID)
+	defer log.Info().Msgf("Finished generation %s with id %s", generation.Type, generation.ID)
+
 	ctx, cancelCtx := context.WithCancel(ctx)
 	defer cancelCtx()
 	go i.onGenerationCanceled(ctx, generation.ID, cancelCtx)
@@ -134,9 +166,8 @@ func (i *feedInteractor) GenerateFeed(ctx context.Context, generationType string
 
 	for err := range errStream {
 		cancelCtx()
-		return i.presenter.PresentErr(err)
+		return err
 	}
-	log.Info().Msgf("Finished generation %s with id %s", generation.Type, generation.ID)
 	return nil
 }
 

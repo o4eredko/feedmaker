@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
@@ -75,7 +76,7 @@ func TestNewFeedInteractor(t *testing.T) {
 	assert.Equal(t, fields.presenter, i.Presenter())
 }
 
-func TestFeedInteractor_Generate(t *testing.T) {
+func TestFeedInteractor_GenerateFeed(t *testing.T) {
 	type args struct {
 		ctx            context.Context
 		generationType string
@@ -257,6 +258,234 @@ func TestFeedInteractor_Generate(t *testing.T) {
 			testCase.setupMocks(testCase.args, fields)
 
 			gotErr := interactor.GenerateFeed(testCase.args.ctx, testCase.args.generationType)
+
+			assert.Equal(t, testCase.wantErr, gotErr)
+			fields.assertExpectations(t)
+		})
+	}
+}
+
+func TestFeedInteractor_RestartGeneration(t *testing.T) {
+	type args struct {
+		ctx          context.Context
+		generationID string
+	}
+	defaultArgs := func() *args {
+		return &args{
+			ctx:          context.Background(),
+			generationID: uuid.NewString(),
+		}
+	}
+	testCases := []struct {
+		name       string
+		args       *args
+		setupMocks func(*args, *fields)
+		wantErr    error
+	}{
+		{
+			name: "succeed",
+			args: defaultArgs(),
+			setupMocks: func(a *args, f *fields) {
+				f.feeds.On("GetGeneration", a.ctx, a.generationID).
+					Return(&entity.Generation{
+						ID:            a.generationID,
+						Type:          "test",
+						Progress:      43,
+						DataFetched:   true,
+						FilesUploaded: 1,
+						StartTime:     time.Unix(10, 0),
+					}, nil)
+				f.feeds.On("GetFactoryByGenerationType", "test").Return(f.factory, nil)
+				f.feeds.On("UpdateGenerationState", a.ctx, &entity.Generation{
+					ID:            a.generationID,
+					Type:          "test",
+					Progress:      0,
+					DataFetched:   false,
+					FilesUploaded: 0,
+					StartTime:     time.Unix(10, 0),
+				}).Return(nil)
+				f.feeds.On("OnGenerationCanceled", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+				f.factory.On("CreateDataFetcher", mock.Anything).Return(f.dataFetcher)
+				f.factory.On("CreateFileFormatter", mock.Anything, mock.Anything).Return(f.fileFormatter)
+				f.factory.On("CreateUploader", mock.Anything).Return(f.uploader)
+
+				f.dataFetcher.
+					On("StreamData", mock.Anything).Return(nil).
+					On("OnDataFetched", mock.Anything).Return(nil).
+					On("OnProgress", mock.Anything).Return(nil)
+				f.fileFormatter.
+					On("FormatFiles", mock.Anything).Return(nil)
+				f.uploader.
+					On("UploadFiles", mock.Anything).Return(nil).
+					On("OnUpload", mock.Anything).Return(nil)
+			},
+		},
+		{
+			name: "get generation error",
+			args: defaultArgs(),
+			setupMocks: func(a *args, f *fields) {
+				f.feeds.On("GetGeneration", a.ctx, a.generationID).Return(nil, defaultErr)
+				f.presenter.On("PresentErr", mock.Anything).Return(errPassThrough)
+			},
+			wantErr: defaultErr,
+		},
+		{
+			name: "unknown generation type",
+			args: defaultArgs(),
+			setupMocks: func(a *args, f *fields) {
+				f.feeds.On("GetGeneration", a.ctx, a.generationID).
+					Return(&entity.Generation{
+						ID:            a.generationID,
+						Type:          "test",
+						Progress:      43,
+						DataFetched:   true,
+						FilesUploaded: 1,
+						StartTime:     time.Unix(10, 0),
+					}, nil)
+				f.feeds.On("GetFactoryByGenerationType", "test").Return(nil, defaultErr)
+				f.presenter.On("PresentErr", mock.Anything).Return(errPassThrough)
+			},
+			wantErr: defaultErr,
+		},
+		{
+			name: "stream data error",
+			args: defaultArgs(),
+			setupMocks: func(a *args, f *fields) {
+				f.feeds.On("GetGeneration", a.ctx, a.generationID).
+					Return(&entity.Generation{
+						ID:            a.generationID,
+						Type:          "test",
+						Progress:      43,
+						DataFetched:   true,
+						FilesUploaded: 1,
+						StartTime:     time.Unix(10, 0),
+					}, nil)
+				f.feeds.On("GetFactoryByGenerationType", "test").Return(f.factory, nil)
+				f.feeds.On("UpdateGenerationState", a.ctx, &entity.Generation{
+					ID:            a.generationID,
+					Type:          "test",
+					Progress:      0,
+					DataFetched:   false,
+					FilesUploaded: 0,
+					StartTime:     time.Unix(10, 0),
+				}).Return(nil)
+				f.feeds.On("OnGenerationCanceled", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+
+				f.factory.On("CreateDataFetcher", mock.Anything).Return(f.dataFetcher)
+				f.factory.On("CreateFileFormatter", mock.Anything, mock.Anything).Return(f.fileFormatter)
+				f.factory.On("CreateUploader", mock.Anything).Return(f.uploader)
+
+				f.dataFetcher.
+					On("StreamData", mock.Anything).Return(defaultErr).After(time.Millisecond*5).
+					On("OnDataFetched", mock.Anything).Return(nil).
+					On("OnProgress", mock.Anything).Return(nil)
+				f.fileFormatter.
+					On("FormatFiles", mock.Anything).Return(nil)
+				f.uploader.
+					On("UploadFiles", mock.Anything).Return(nil).
+					On("OnUpload", mock.Anything).Return(nil)
+
+				f.presenter.On("PresentErr", mock.Anything).Return(errPassThrough)
+			},
+			wantErr: defaultErr,
+		},
+		{
+			name: "format files error",
+			args: defaultArgs(),
+			setupMocks: func(a *args, f *fields) {
+				f.feeds.On("GetGeneration", a.ctx, a.generationID).
+					Return(&entity.Generation{
+						ID:            a.generationID,
+						Type:          "test",
+						Progress:      43,
+						DataFetched:   true,
+						FilesUploaded: 1,
+						StartTime:     time.Unix(10, 0),
+					}, nil)
+				f.feeds.On("GetFactoryByGenerationType", "test").Return(f.factory, nil)
+				f.feeds.On("UpdateGenerationState", a.ctx, &entity.Generation{
+					ID:            a.generationID,
+					Type:          "test",
+					Progress:      0,
+					DataFetched:   false,
+					FilesUploaded: 0,
+					StartTime:     time.Unix(10, 0),
+				}).Return(nil)
+				f.feeds.On("OnGenerationCanceled", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+
+				f.factory.On("CreateDataFetcher", mock.Anything).Return(f.dataFetcher)
+				f.factory.On("CreateFileFormatter", mock.Anything, mock.Anything).Return(f.fileFormatter)
+				f.factory.On("CreateUploader", mock.Anything).Return(f.uploader)
+
+				f.dataFetcher.
+					On("StreamData", mock.Anything).Return(nil).
+					On("OnDataFetched", mock.Anything).Return(nil).
+					On("OnProgress", mock.Anything).Return(nil)
+				f.fileFormatter.
+					On("FormatFiles", mock.Anything).Return(defaultErr).After(time.Millisecond * 5)
+				f.uploader.
+					On("UploadFiles", mock.Anything).Return(nil).
+					On("OnUpload", mock.Anything).Return(nil)
+
+				f.presenter.On("PresentErr", mock.Anything).Return(errPassThrough)
+			},
+			wantErr: defaultErr,
+		},
+		{
+			name: "upload files error",
+			args: defaultArgs(),
+			setupMocks: func(a *args, f *fields) {
+				f.feeds.On("GetGeneration", a.ctx, a.generationID).
+					Return(&entity.Generation{
+						ID:            a.generationID,
+						Type:          "test",
+						Progress:      43,
+						DataFetched:   true,
+						FilesUploaded: 1,
+						StartTime:     time.Unix(10, 0),
+					}, nil)
+				f.feeds.On("GetFactoryByGenerationType", "test").Return(f.factory, nil)
+				f.feeds.On("UpdateGenerationState", a.ctx, &entity.Generation{
+					ID:            a.generationID,
+					Type:          "test",
+					Progress:      0,
+					DataFetched:   false,
+					FilesUploaded: 0,
+					StartTime:     time.Unix(10, 0),
+				}).Return(nil)
+				f.feeds.On("OnGenerationCanceled", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+
+				f.factory.On("CreateDataFetcher", mock.Anything).Return(f.dataFetcher)
+				f.factory.On("CreateFileFormatter", mock.Anything, mock.Anything).Return(f.fileFormatter)
+				f.factory.On("CreateUploader", mock.Anything).Return(f.uploader)
+
+				f.dataFetcher.
+					On("StreamData", mock.Anything).Return(nil).
+					On("OnDataFetched", mock.Anything).Return(nil).
+					On("OnProgress", mock.Anything).Return(nil)
+				f.fileFormatter.
+					On("FormatFiles", mock.Anything).Return(nil)
+				f.uploader.
+					On("UploadFiles", mock.Anything).Return(defaultErr).After(time.Millisecond*5).
+					On("OnUpload", mock.Anything).Return(nil)
+
+				f.presenter.On("PresentErr", mock.Anything).Return(errPassThrough)
+			},
+			wantErr: defaultErr,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			fields := defaultFields()
+			interactor := fields.newInteractor()
+			testCase.setupMocks(testCase.args, fields)
+
+			gotErr := interactor.RestartGeneration(testCase.args.ctx, testCase.args.generationID)
 
 			assert.Equal(t, testCase.wantErr, gotErr)
 			fields.assertExpectations(t)
