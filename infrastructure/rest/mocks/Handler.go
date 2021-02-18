@@ -38,6 +38,11 @@ func (_m *Handler) ListSchedules(w http.ResponseWriter, r *http.Request) {
 	_m.Called(w, r)
 }
 
+// RestartGeneration provides a mock function with given fields: w, r
+func (_m *Handler) RestartGeneration(w http.ResponseWriter, r *http.Request) {
+	_m.Called(w, r)
+}
+
 // ScheduleGeneration provides a mock function with given fields: w, r
 func (_m *Handler) ScheduleGeneration(w http.ResponseWriter, r *http.Request) {
 	_m.Called(w, r)

@@ -72,7 +72,21 @@ func (h *handler) CancelGeneration(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, http.StatusInternalServerError, err)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusAccepted)
+}
+
+func (h *handler) RestartGeneration(w http.ResponseWriter, r *http.Request) {
+	generationID, err := extractGenerationID(r)
+	if err != nil {
+		errorResponse(w, http.StatusBadRequest, err)
+		return
+	}
+	_ = generationID
+	// if err := h.feeds.RestartGeneration(r.Context(), generationID); err != nil {
+	// 	errorResponse(w, http.StatusInternalServerError, err)
+	// 	return
+	// }
+	w.WriteHeader(http.StatusCreated)
 }
 
 func (h *handler) ScheduleGeneration(w http.ResponseWriter, r *http.Request) {

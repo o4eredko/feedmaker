@@ -63,25 +63,33 @@ func TestNewRouter(t *testing.T) {
 			},
 		},
 		{
-			name:   "POST /generations/foobar",
+			name:   "POST /generations/types/foobar",
 			fields: defaultRouterFields(),
-			args:   mustMakeArgs(http.MethodPost, "/generations/foobar"),
+			args:   mustMakeArgs(http.MethodPost, "/generations/types/foobar"),
 			setupMocks: func(fields *routerFields) {
 				fields.handler.On("GenerateFeed", mock.Anything, mock.Anything)
 			},
 		},
 		{
-			name:   "DELETE /generations/foobar",
+			name:   "POST /generations/id/foobar",
 			fields: defaultRouterFields(),
-			args:   mustMakeArgs(http.MethodDelete, "/generations/foobar"),
+			args:   mustMakeArgs(http.MethodPost, "/generations/id/foobar"),
+			setupMocks: func(fields *routerFields) {
+				fields.handler.On("RestartGeneration", mock.Anything, mock.Anything)
+			},
+		},
+		{
+			name:   "DELETE /generations/id/foobar",
+			fields: defaultRouterFields(),
+			args:   mustMakeArgs(http.MethodDelete, "/generations/id/foobar"),
 			setupMocks: func(fields *routerFields) {
 				fields.handler.On("CancelGeneration", mock.Anything, mock.Anything)
 			},
 		},
 		{
-			name:   "POST /generations/foobar/schedules",
+			name:   "POST /generations/types/foobar/schedules",
 			fields: defaultRouterFields(),
-			args:   mustMakeArgs(http.MethodPost, "/generations/foobar/schedules"),
+			args:   mustMakeArgs(http.MethodPost, "/generations/types/foobar/schedules"),
 			setupMocks: func(fields *routerFields) {
 				fields.handler.On("ScheduleGeneration", mock.Anything, mock.Anything)
 			},
@@ -95,9 +103,9 @@ func TestNewRouter(t *testing.T) {
 			},
 		},
 		{
-			name:   "DELETE /generations/foobar/schedules",
+			name:   "DELETE /generations/types/foobar/schedules",
 			fields: defaultRouterFields(),
-			args:   mustMakeArgs(http.MethodDelete, "/generations/foobar/schedules"),
+			args:   mustMakeArgs(http.MethodDelete, "/generations/types/foobar/schedules"),
 			setupMocks: func(fields *routerFields) {
 				fields.handler.On("UnscheduleGeneration", mock.Anything, mock.Anything)
 			},

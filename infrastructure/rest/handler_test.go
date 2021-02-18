@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -39,7 +40,7 @@ func Test_handler_ListGenerations(t *testing.T) {
 	defaultArgs := func() *args {
 		return &args{
 			w: httptest.NewRecorder(),
-			r: httptest.NewRequest(http.MethodGet, "/generations", nil),
+			r: &http.Request{},
 		}
 	}
 	testCases := []struct {
@@ -97,7 +98,7 @@ func Test_handler_ListGenerationTypes(t *testing.T) {
 	defaultArgs := func() *args {
 		return &args{
 			w: httptest.NewRecorder(),
-			r: httptest.NewRequest(http.MethodGet, "/generations/types", nil),
+			r: &http.Request{},
 		}
 	}
 	testCases := []struct {
@@ -154,7 +155,7 @@ func Test_handler_GenerateFeed(t *testing.T) {
 		generationType string
 	}
 	defaultArgs := func(generationType string) *args {
-		request := httptest.NewRequest(http.MethodPost, "/generations/"+generationType, nil)
+		request := &http.Request{}
 		if generationType != "" {
 			vars := map[string]string{"generation-type": generationType}
 			request = mux.SetURLVars(request, vars)
@@ -229,7 +230,7 @@ func Test_handler_CancelGeneration(t *testing.T) {
 		generationID string
 	}
 	defaultArgs := func(generationID string) *args {
-		request := httptest.NewRequest(http.MethodDelete, "/generations/"+generationID, nil)
+		request := &http.Request{}
 		if generationID != "" {
 			vars := map[string]string{"generation-id": generationID}
 			request = mux.SetURLVars(request, vars)
@@ -257,7 +258,7 @@ func Test_handler_CancelGeneration(t *testing.T) {
 					Return(nil)
 			},
 			args:           defaultArgs("foobar"),
-			wantStatusCode: http.StatusOK,
+			wantStatusCode: http.StatusAccepted,
 		},
 		{
 			name:   "error in feeds.ListGenerationTypes",
@@ -271,6 +272,58 @@ func Test_handler_CancelGeneration(t *testing.T) {
 			wantStatusCode: http.StatusInternalServerError,
 			wantBody:       mustMarshal(map[string]string{"details": defaultTestErr.Error()}),
 		},
+		{
+			name:           "empty generation id",
+			fields:         defaultHandlerFields(),
+			setupMocks:     func(fields *handlerFields, args *args) {},
+			args:           defaultArgs(""),
+			wantStatusCode: http.StatusBadRequest,
+			wantBody: mustMarshal(map[string]string{
+				"details": fmt.Errorf("looking for generation-id: %w",
+					rest.ErrValueNotFoundInURL).Error(),
+			}),
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.setupMocks(testCase.fields, testCase.args)
+			h := rest.NewHandler(testCase.fields.feeds, testCase.fields.scheduler)
+			h.CancelGeneration(testCase.args.w, testCase.args.r)
+			gotStatusCode := testCase.args.w.Code
+			gotBody := testCase.args.w.Body.Bytes()
+			assert.Equal(t, testCase.wantStatusCode, gotStatusCode)
+			assert.Equal(t, testCase.wantBody, gotBody)
+			testCase.fields.feeds.AssertExpectations(t)
+		})
+	}
+}
+
+func Test_handler_RestartGeneration(t *testing.T) {
+	type args struct {
+		w            *httptest.ResponseRecorder
+		r            *http.Request
+		generationID string
+	}
+	defaultArgs := func(generationID string) *args {
+		request := &http.Request{}
+		if generationID != "" {
+			vars := map[string]string{"generation-id": generationID}
+			request = mux.SetURLVars(request, vars)
+		}
+		return &args{
+			w:            httptest.NewRecorder(),
+			r:            request,
+			generationID: generationID,
+		}
+	}
+	testCases := []struct {
+		name           string
+		fields         *handlerFields
+		setupMocks     func(*handlerFields, *args)
+		args           *args
+		wantStatusCode int
+		wantBody       []byte
+	}{
 		{
 			name:           "empty generation id",
 			fields:         defaultHandlerFields(),
@@ -311,7 +364,7 @@ func Test_handler_ScheduleGeneration(t *testing.T) {
 			bodyContent = mustMarshal(scheduleIn)
 		}
 		body := bytes.NewBuffer(bodyContent)
-		request := httptest.NewRequest(http.MethodPost, "/generations/"+generationType+"/schedule", body)
+		request := &http.Request{Body: ioutil.NopCloser(body)}
 		if generationType != "" {
 			vars := map[string]string{"generation-type": generationType}
 			request = mux.SetURLVars(request, vars)
@@ -402,7 +455,7 @@ func Test_handler_ListSchedules(t *testing.T) {
 	defaultArgs := func() *args {
 		return &args{
 			w: httptest.NewRecorder(),
-			r: httptest.NewRequest(http.MethodPost, "/generations/schedules", nil),
+			r: &http.Request{},
 		}
 	}
 	testCases := []struct {
@@ -459,7 +512,7 @@ func Test_handler_UnscheduleGeneration(t *testing.T) {
 		generationType string
 	}
 	defaultArgs := func(generationType string) *args {
-		request := httptest.NewRequest(http.MethodPost, "/generations/"+generationType+"/schedule", nil)
+		request := &http.Request{}
 		if generationType != "" {
 			vars := map[string]string{"generation-type": generationType}
 			request = mux.SetURLVars(request, vars)
