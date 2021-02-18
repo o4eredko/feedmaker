@@ -20,8 +20,11 @@ type CsvFormatter struct {
 	inStream         <-chan []string
 	outStream        chan<- io.ReadCloser
 	recordsProcessed uint
-	writer           *csv.Writer
-	buffer           *LimitBuffer
+	csvWriter        *csv.Writer
+	limitWriter      *LimitWriter
+	currentFile      *os.File
+	sizeLimit        bytesize.ByteSize
+	lineLimit        uint
 }
 
 func NewCsvFormatter(
@@ -30,29 +33,36 @@ func NewCsvFormatter(
 	sizeLimit bytesize.ByteSize,
 	lineLimit uint,
 ) *CsvFormatter {
-	buffer := NewLimitBuffer(sizeLimit, lineLimit)
 	return &CsvFormatter{
 		inStream:  inStream,
 		outStream: outStream,
-		buffer:    buffer,
-		writer:    csv.NewWriter(buffer),
+		sizeLimit: sizeLimit,
+		lineLimit: lineLimit,
 	}
 }
 
 func (f *CsvFormatter) FormatFiles(ctx context.Context) error {
+	if err := f.createCsvWriter(); err != nil {
+		return err
+	}
 	for {
 		select {
 		case record, isOpen := <-f.inStream:
 			if !isOpen {
-				return f.sendBufferToStream()
+				return f.sendCsvFileToStream()
 			}
-			err := f.writeCSVToBuffer(record)
+			err := f.writeRecordToCsv(record)
 			if err == ErrLinesOverflow || err == ErrSizeOverflow {
-				if f.buffer.LinesWritten() == 0 {
+				if f.limitWriter.LinesWritten() == 0 {
 					return ErrSingleRecordOverflowsLimits
-				} else if err := f.sendBufferToStream(); err != nil {
+				}
+				if err := f.sendCsvFileToStream(); err != nil {
 					return err
-				} else if err := f.writeCSVToBuffer(record); err != nil {
+				}
+				if err := f.createCsvWriter(); err != nil {
+					return err
+				}
+				if err := f.writeRecordToCsv(record); err != nil {
 					return err
 				}
 			} else if err != nil {
@@ -64,37 +74,35 @@ func (f *CsvFormatter) FormatFiles(ctx context.Context) error {
 	}
 }
 
-func (f *CsvFormatter) sendBufferToStream() error {
-	file, err := f.flushBufferToFile()
+func (f *CsvFormatter) createCsvWriter() error {
+	file, err := createTmpFile()
 	if err != nil {
 		return err
 	}
-	f.outStream <- file
+	f.currentFile = file
+	f.limitWriter = NewLimitWriter(file, f.sizeLimit, f.lineLimit)
+	f.csvWriter = csv.NewWriter(f.limitWriter)
 	return nil
 }
 
-func (f *CsvFormatter) writeCSVToBuffer(record []string) error {
-	if err := f.writer.Write(record); err != nil {
+func (f *CsvFormatter) sendCsvFileToStream() error {
+	if err := f.limitWriter.Flush(); err != nil {
+		return err
+	} else if _, err := f.currentFile.Seek(0, 0); err != nil {
 		return err
 	}
-	f.writer.Flush()
-	return f.writer.Error()
+	f.outStream <- f.currentFile
+	return nil
 }
 
-func (f *CsvFormatter) flushBufferToFile() (io.ReadCloser, error) {
-	file, err := os.Create(path.Join("/tmp", uuid.NewString()+".csv"))
-	if err != nil {
-		return nil, err
+func (f *CsvFormatter) writeRecordToCsv(record []string) error {
+	if err := f.csvWriter.Write(record); err != nil {
+		return err
 	}
+	f.csvWriter.Flush()
+	return f.csvWriter.Error()
+}
 
-	if _, err := file.ReadFrom(f.buffer); err != nil {
-		return nil, err
-	}
-	f.buffer.Reset()
-	f.writer = csv.NewWriter(f.buffer)
-	if _, err := file.Seek(0, 0); err != nil {
-		return nil, err
-	}
-
-	return file, nil
+func createTmpFile() (*os.File, error) {
+	return os.Create(path.Join("/tmp", uuid.NewString()+".csv"))
 }

@@ -1,6 +1,8 @@
 package repository_test
 
 import (
+	"bytes"
+	"io/ioutil"
 	"testing"
 
 	"github.com/inhies/go-bytesize"
@@ -42,12 +44,20 @@ func TestLimitBuffer_Write(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			buf := repository.NewLimitBuffer(testCase.sizeLimit, testCase.lineLimit)
+			buffer := new(bytes.Buffer)
+			limitWriter := repository.NewLimitWriter(buffer, testCase.sizeLimit, testCase.lineLimit)
 
-			gotN, gotErr := buf.Write(testCase.data)
+			gotN, gotErr := limitWriter.Write(testCase.data)
+			assert.NoError(t, limitWriter.Flush())
 
 			assert.Equal(t, testCase.wantN, gotN)
 			assert.Equal(t, testCase.wantErr, gotErr)
+
+			if testCase.wantErr == nil {
+				got, err := ioutil.ReadAll(buffer)
+				assert.NoError(t, err)
+				assert.Equal(t, testCase.data, got)
+			}
 		})
 	}
 }

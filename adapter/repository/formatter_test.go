@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/inhies/go-bytesize"
-	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 
 	"go-feedmaker/adapter/repository"
@@ -97,7 +96,7 @@ func TestCsvFormatter_FormatFiles(t *testing.T) {
 			},
 			ctx: context.Background(),
 			records: []record{
-				{in: []string{"a1", "b1", "c1"}, csv: "a1,b1,c1"},
+				{in: []string{"a", "b1", "c1"}, csv: "a1,b1,c1"},
 				{in: []string{"a2", "b2", "c2"}, csv: "a2,b2,c2"},
 				{in: []string{"a3", "b3", "c3"}, csv: "a3,b3,c3"},
 			},
@@ -165,7 +164,6 @@ func TestCsvFormatter_FormatFiles(t *testing.T) {
 				assert.LessOrEqual(t, fileSize, int(tc.fields.sizeLimit))
 				assert.NoError(t, file.Close())
 			}
-			log.Info().Msgf("XYI")
 			wg.Wait()
 		})
 	}
