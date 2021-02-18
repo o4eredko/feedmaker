@@ -110,6 +110,7 @@ func (i *feedInteractor) RestartGeneration(ctx context.Context, generationID str
 	generation.DataFetched = false
 	generation.FilesUploaded = 0
 	generation.Progress = 0
+	generation.IsCanceled = false
 	if err := i.feeds.UpdateGenerationState(ctx, generation); err != nil {
 		return i.presenter.PresentErr(err)
 	}
