@@ -88,6 +88,20 @@ func (_m *FeedInteractor) ListGenerations(ctx context.Context) (interface{}, err
 	return r0, r1
 }
 
+// RestartGeneration provides a mock function with given fields: ctx, generationID
+func (_m *FeedInteractor) RestartGeneration(ctx context.Context, generationID string) error {
+	ret := _m.Called(ctx, generationID)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = rf(ctx, generationID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // WatchGenerationsProgress provides a mock function with given fields: ctx, outStream
 func (_m *FeedInteractor) WatchGenerationsProgress(ctx context.Context, outStream chan<- *entity.Generation) error {
 	ret := _m.Called(ctx, outStream)

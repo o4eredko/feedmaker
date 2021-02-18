@@ -53,6 +53,29 @@ func (_m *FeedRepo) GetFactoryByGenerationType(generationType string) (interacto
 	return r0, r1
 }
 
+// GetGeneration provides a mock function with given fields: ctx, generationID
+func (_m *FeedRepo) GetGeneration(ctx context.Context, generationID string) (*entity.Generation, error) {
+	ret := _m.Called(ctx, generationID)
+
+	var r0 *entity.Generation
+	if rf, ok := ret.Get(0).(func(context.Context, string) *entity.Generation); ok {
+		r0 = rf(ctx, generationID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*entity.Generation)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, generationID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // IsAllowedType provides a mock function with given fields: generationType
 func (_m *FeedRepo) IsAllowedType(generationType string) bool {
 	ret := _m.Called(generationType)
