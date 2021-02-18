@@ -81,11 +81,10 @@ func (h *handler) RestartGeneration(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, http.StatusBadRequest, err)
 		return
 	}
-	_ = generationID
-	// if err := h.feeds.RestartGeneration(r.Context(), generationID); err != nil {
-	// 	errorResponse(w, http.StatusInternalServerError, err)
-	// 	return
-	// }
+	if err := h.feeds.RestartGeneration(r.Context(), generationID); err != nil {
+		errorResponse(w, http.StatusInternalServerError, err)
+		return
+	}
 	w.WriteHeader(http.StatusCreated)
 }
 

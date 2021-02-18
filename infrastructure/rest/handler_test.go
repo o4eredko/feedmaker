@@ -261,7 +261,7 @@ func Test_handler_CancelGeneration(t *testing.T) {
 			wantStatusCode: http.StatusAccepted,
 		},
 		{
-			name:   "error in feeds.ListGenerationTypes",
+			name:   "error in feeds.CancelGeneration",
 			fields: defaultHandlerFields(),
 			setupMocks: func(fields *handlerFields, args *args) {
 				fields.feeds.
@@ -325,6 +325,29 @@ func Test_handler_RestartGeneration(t *testing.T) {
 		wantBody       []byte
 	}{
 		{
+			name:   "succeed",
+			fields: defaultHandlerFields(),
+			setupMocks: func(fields *handlerFields, args *args) {
+				fields.feeds.
+					On("RestartGeneration", args.r.Context(), args.generationID).
+					Return(nil)
+			},
+			args:           defaultArgs("foobar"),
+			wantStatusCode: http.StatusCreated,
+		},
+		{
+			name:   "error in feeds.RestartGeneration",
+			fields: defaultHandlerFields(),
+			setupMocks: func(fields *handlerFields, args *args) {
+				fields.feeds.
+					On("RestartGeneration", args.r.Context(), args.generationID).
+					Return(defaultTestErr)
+			},
+			args:           defaultArgs("foobar"),
+			wantStatusCode: http.StatusInternalServerError,
+			wantBody:       mustMarshal(map[string]string{"details": defaultTestErr.Error()}),
+		},
+		{
 			name:           "empty generation id",
 			fields:         defaultHandlerFields(),
 			setupMocks:     func(fields *handlerFields, args *args) {},
@@ -340,7 +363,7 @@ func Test_handler_RestartGeneration(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.setupMocks(testCase.fields, testCase.args)
 			h := rest.NewHandler(testCase.fields.feeds, testCase.fields.scheduler)
-			h.CancelGeneration(testCase.args.w, testCase.args.r)
+			h.RestartGeneration(testCase.args.w, testCase.args.r)
 			gotStatusCode := testCase.args.w.Code
 			gotBody := testCase.args.w.Body.Bytes()
 			assert.Equal(t, testCase.wantStatusCode, gotStatusCode)
