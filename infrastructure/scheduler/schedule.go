@@ -2,8 +2,6 @@ package scheduler
 
 import (
 	"time"
-
-	"github.com/rs/zerolog/log"
 )
 
 type (
@@ -35,20 +33,9 @@ func (s *Schedule) FireInterval() time.Duration {
 func (s *Schedule) Next(nowTimestamp time.Time) time.Time {
 	if !s.startTimestampExceeded {
 		s.startTimestampExceeded = true
-		startTimestamp := s.getAlignedStartTimestamp(nowTimestamp)
-		log.Info().
-			Str("now", nowTimestamp.UTC().Format(time.RFC3339)).
-			Str("timestamp", startTimestamp.UTC().Format(time.RFC3339)).
-			Msg("first call of Next")
-		return startTimestamp
+		return s.getAlignedStartTimestamp(nowTimestamp)
 	}
-
-	nextTimestamp := s.getNextTimestamp(nowTimestamp)
-	log.Info().
-		Str("now", nowTimestamp.UTC().Format(time.RFC3339)).
-		Str("timestamp", nextTimestamp.UTC().Format(time.RFC3339)).
-		Msg("another one call of Next")
-	return nextTimestamp
+	return s.getNextTimestamp(nowTimestamp)
 }
 
 func (s *Schedule) getAlignedStartTimestamp(nowTimestamp time.Time) time.Time {
