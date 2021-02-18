@@ -173,6 +173,7 @@ func (r *feedRepo) UpdateGenerationState(ctx context.Context, generation *entity
 	hashArgs := new(redis.Args).Add(generation.ID).
 		Add("progress", generation.Progress).
 		Add("data_fetched", generation.DataFetched).
+		Add("is_canceled", generation.IsCanceled).
 		Add("files_uploaded", generation.FilesUploaded)
 	if !generation.EndTime.IsZero() {
 		hashArgs = hashArgs.Add("end_time", generation.EndTime.Unix())
