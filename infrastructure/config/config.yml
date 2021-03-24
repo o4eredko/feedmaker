@@ -23,7 +23,7 @@ feeds:
   criteo_de:
     database:
       driver: "mssql"
-      dsn: "sqlserver://${WAREHOUSE_USERNAME|user}:${WAREHOUSE_PASSWORD|password}@warehouse.jo?database=Marketing"
+      dsn: "sqlserver://${DB_USERNAME|user}:${DB_PASSWORD|password}@storage.io?database=DB"
     line_limit: 100
     size_limit: "2GB"
     count_query: "queries/criteo_de/count.sql"

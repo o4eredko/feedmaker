@@ -1,1 +1,1 @@
-SELECT count(*) FROM Marketing.dbo.accounts
+SELECT count(*) FROM accounts

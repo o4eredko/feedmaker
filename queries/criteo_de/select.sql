@@ -1,2 +1,1 @@
-SELECT *
-FROM Marketing.dbo.accounts
+SELECT * FROM accounts
