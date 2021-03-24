@@ -21,7 +21,7 @@ All communications with this service made by API.
 /types/{generation-type}/schedules DELETE unshedule generation
 ```
 ## UI
-There is an SPA in React.js, but this interface is a part of bigger CRM system, so only screenshots could be attached:
+There is an SPA in React.js, but this interface is part of a bigger CRM system, so only screenshots could be attached:
 
 ![Generations](/images/generations.png?raw=true)
 ![Generations](/images/schedules.png?raw=true)
