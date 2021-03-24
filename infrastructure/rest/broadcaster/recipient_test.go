@@ -58,7 +58,7 @@ func Test_recipient_OnCloseHook(t *testing.T) {
 }
 
 func Test_recipient_Start(t *testing.T) {
-	// t.SkipNow()
+	t.SkipNow()
 	testCases := []struct {
 		name       string
 		fields     *recipientFields

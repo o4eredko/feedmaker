@@ -25,6 +25,6 @@ feeds:
       driver: "mssql"
       dsn: "sqlserver://${WAREHOUSE_USERNAME|user}:${WAREHOUSE_PASSWORD|password}@warehouse.jo?database=Marketing"
     line_limit: 100
-    size_limit: "10000MB"
+    size_limit: "2GB"
     count_query: "queries/criteo_de/count.sql"
     select_query: "queries/criteo_de/select.sql"
